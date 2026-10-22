@@ -86,6 +86,19 @@ All notable changes to EquivalenceKit are recorded here. Format follows Keep a C
   string. Recorded in `docs/contracts.md`; the deployment uses the genlayer-test client,
   which encodes strings correctly.
 
+### Added — M-UI playground (optional companion)
+- `tools/export_site_data.py`: generates the playground's data from the repo (pattern specs,
+  acceptance matrices, canonical examples, tightness report) with a `--check` staleness gate.
+- `tools/copy_pkg.mjs`: copies the real `equivalencekit` package into `playground/public/pkg/`
+  so the browser runs the same primitives the contracts run.
+- `playground/`: static Vite + React + TypeScript site with four screens (Patterns,
+  Playground, Tightness, Decision guide) and a Pyodide worker. 41 tests pass, including a
+  Pyodide engine test that runs every matrix case in the browser's wasm Python and proves
+  the precomputed results match the package.
+- `playground/src/data/*`: generated site data (9 files), committed and staleness-checked.
+- `tests/site/` (planned) left as a TODO; the staleness check runs via
+  `tools/export_site_data.py --check`.
+
 ### Added — M11 documentation
 - `docs/pattern-catalog.md`, `docs/decision-guide.md`, `docs/tightness-testing.md`,
   `docs/anti-patterns.md`, `docs/threat-model.md`, `README.md`, `CHANGELOG.md`.

@@ -1,0 +1,15 @@
+{
+  "package": "equivalencekit",
+  "version": "0.1.0",
+  "files": [
+    "__init__.py",
+    "bounds.py",
+    "compare.py",
+    "digest.py",
+    "errors.py",
+    "normalize.py",
+    "parsing.py",
+    "patterns.py",
+    "perturb.py"
+  ]
+}

@@ -1,0 +1,51 @@
+/* Design tokens for the EquivalenceKit playground.
+   Names and hex values come from UI.md section 3.3. Roles, not decoration. */
+
+:root {
+  /* Colour: named roles */
+  --bench: #eef2f0;
+  --sheet: #ffffff;
+  --graphite: #1b2a2f;
+  --calibre: #4a3fbf;
+  --accept: #1e7a68;
+  --reject: #be3455;
+  --edge: #b9820f;
+  --rule: #c6d0cc;
+
+  /* Tints derived from the roles above */
+  --accept-tint: #e6f2ef;
+  --reject-tint: #fbeaee;
+  --edge-tint: #fbf2df;
+  --calibre-tint: #eeecf9;
+  --graphite-muted: #55666c;
+
+  /* Type */
+  --font-ui: "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-md: 1.1875rem;
+  --text-lg: 1.4375rem;
+  --text-xl: 1.75rem;
+  --text-2xl: 2.125rem;
+
+  /* Space */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  /* Shape: radius is deliberate. 2px on fields and editors, 6px on dialogs,
+     none on tracks. One border weight. One elevation, for dialogs only. */
+  --radius-field: 2px;
+  --radius-dialog: 6px;
+  --border: 1px solid var(--rule);
+  --shadow-dialog: 0 8px 24px rgba(27, 42, 47, 0.12);
+
+  --content-width: 1280px;
+}

@@ -176,6 +176,50 @@ tests/direct/       contracts with mocked web and LLM
 tests/integration/  real consensus on StudioNet
 ```
 
+## Live deployments (StudioNet)
+
+StudioNet is gasless (0 GEN). Both reference contracts are deployed there; the full
+record — addresses, transaction hashes, saved schemas, and per-step validator votes — is in
+[`deployments/studionet.md`](deployments/studionet.md).
+
+| Contract | Address | Explorer |
+|---|---|---|
+| VerdictJudge | `0x34c97Ca059b36C967A11C4c4DE9bEE096e017A4a` | [view](https://explorer-studio.genlayer.com/address/0x34c97Ca059b36C967A11C4c4DE9bEE096e017A4a) |
+| WebFactAttestor | `0xAeA5d7626807B1821837313cED685d97F73eA80D` | [view](https://explorer-studio.genlayer.com/address/0xAeA5d7626807B1821837313cED685d97F73eA80D) |
+
+A VerdictJudge evaluation reached agreement on a real LLM round: verdict `ELIGIBLE`, band
+`HIGH`, digest stored but never compared. A WebFactAttestor attestation fetched the live
+`example.com` page under P2 consensus: `has_heading: false`, `mentions_documentation: true`,
+`word_bucket: 1`, digest `d7ee97cd`.
+
+Testnet (Bradbury / Asimov) deployment is not done: it needs a funded account, and claiming
+testnet GEN at the faucet is a browser step.
+
+## Using the playground (optional companion)
+
+The playground is a static site in `playground/`. It runs the real `equivalencekit` package
+in the browser through Pyodide, so every accept or reject it shows comes from the same
+primitives the contracts run.
+
+```bash
+cd playground
+npm install
+npm run dev          # http://127.0.0.1:5173
+npm run test         # 41 tests, including the Pyodide engine test
+npm run build        # writes dist/
+```
+
+The site data is generated from the repo, never hand-edited:
+
+```bash
+cd ..
+python3.12 tools/export_site_data.py         # regenerate
+python3.12 tools/export_site_data.py --check # fails if stale
+```
+
+The playground is an optional companion, not part of the contract submission. It has no
+wallet, no transactions, and no chain access; it compares outputs and shows the rules.
+
 ## Credits and prior art
 
 Built on the GenLayer builder program and informed by:
