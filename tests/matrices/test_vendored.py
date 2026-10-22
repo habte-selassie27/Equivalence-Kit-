@@ -17,8 +17,10 @@ from pathlib import Path
 import pytest
 
 import equivalencekit.compare as package_compare
+import equivalencekit.digest as package_digest
 import equivalencekit.normalize as package_normalize
 import equivalencekit.parsing as package_parsing
+import equivalencekit.patterns as package_patterns
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 CONTRACT = ROOT / "contracts" / "verdict_judge.py"
@@ -251,6 +253,92 @@ PARSE_SAMPLES = {
     ],
 }
 
+DIGEST_SAMPLES = {
+    "fnv1a_32": [
+        (("",), {}),
+        (("a",), {}),
+        (("foobar",), {}),
+        (("Café",), {}),
+        ((123,), {}),
+        (("x" * (16 * 1024 + 1),), {}),
+    ],
+    "digest_hex": [
+        (("same",), {}),
+        (("same ",), {}),
+    ],
+}
+
+PATTERN_SAMPLES = {
+    "compare_p2": [
+        (
+            (
+                {"source_status": "OK", "facts": {"b": True, "n": 300}},
+                {"source_status": "ok", "facts": {"b": "yes", "n": 301}},
+                {"rules": {"b": {"kind": "bool"}, "n": {"kind": "bucket", "edges": [300, 1000]}}},
+            ),
+            {},
+        ),
+        (
+            (
+                {"source_status": "OK", "facts": {"b": True}},
+                {"source_status": "UNAVAILABLE", "facts": {}},
+                {"rules": {"b": {"kind": "bool"}}},
+            ),
+            {},
+        ),
+        (
+            (
+                {"source_status": "UNAVAILABLE", "facts": {}},
+                {"source_status": "UNAVAILABLE", "facts": {}},
+                {"rules": {"b": {"kind": "bool"}}},
+            ),
+            {},
+        ),
+        (
+            (
+                {"source_status": "UNAVAILABLE", "facts": {"b": False}},
+                {"source_status": "UNAVAILABLE", "facts": {"b": False}},
+                {"rules": {"b": {"kind": "bool"}}},
+            ),
+            {},
+        ),
+        (
+            (
+                {"source_status": "OK", "facts": {"b": True}},
+                {"source_status": "OK", "facts": {"b": True, "extra": 1}},
+                {"rules": {"b": {"kind": "bool"}}},
+            ),
+            {},
+        ),
+    ],
+    "compare_p1": [
+        (
+            (
+                {"verdict": "ELIGIBLE", "band": "LOW", "cited_ids": ["a"], "digest": "one"},
+                {"verdict": "eligible", "band": "MEDIUM", "cited_ids": ["a"], "digest": "two"},
+                {
+                    "verdict_set": ["ELIGIBLE", "INELIGIBLE"],
+                    "provided_ids": ["a"],
+                    "deterministic_checks": {"hard": True},
+                    "forbidden": {"hard": ["ELIGIBLE"]},
+                },
+            ),
+            {},
+        ),
+        (
+            (
+                {"verdict": "ELIGIBLE", "band": "LOW", "cited_ids": ["a"]},
+                {"verdict": "ELIGIBLE", "band": "HIGH", "cited_ids": ["a"]},
+                {
+                    "verdict_set": ["ELIGIBLE", "INELIGIBLE"],
+                    "provided_ids": ["a"],
+                },
+            ),
+            {},
+        ),
+    ],
+}
+
 
 @pytest.mark.parametrize("function_name", sorted(NORMALIZE_SAMPLES))
 def test_vendored_normalizers_match_package(function_name):
@@ -265,6 +353,16 @@ def test_vendored_comparators_match_package(function_name):
 @pytest.mark.parametrize("function_name", sorted(PARSE_SAMPLES))
 def test_vendored_parsing_matches_package(function_name):
     _check(function_name, PARSE_SAMPLES[function_name], package_parsing)
+
+
+@pytest.mark.parametrize("function_name", sorted(DIGEST_SAMPLES))
+def test_vendored_digest_matches_package(function_name):
+    _check(function_name, DIGEST_SAMPLES[function_name], package_digest)
+
+
+@pytest.mark.parametrize("function_name", sorted(PATTERN_SAMPLES))
+def test_vendored_patterns_match_package(function_name):
+    _check(function_name, PATTERN_SAMPLES[function_name], package_patterns)
 
 
 def test_all_of_matches_package():

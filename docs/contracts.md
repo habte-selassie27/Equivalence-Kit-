@@ -37,7 +37,7 @@ Sources used:
 | Validator input | `gl.vm.Return` with `.calldata`; error results are not `Return` | non-determinism |
 | Validator output | `bool` (accept / reject the leader result) | non-determinism |
 | LLM | `gl.nondet.exec_prompt(prompt, response_format="json")` | calling-llms |
-| Web | `gl.nondet.web.get(url)` or `gl.nondet.web.request(url, method="GET")`; `.body` bytes, `.status_code` | web-access |
+| Web | `gl.nondet.web.get(url)`; response fields are `.status`, `.headers`, `.body` (bytes); the docs text says `.status_code`, but the pinned SDK defines `Response(status, headers, body)` | web-access + installed SDK |
 | Web inside nondet | All `gl.nondet.*` calls must be inside the leader/validator block | non-determinism |
 | Storage writes | Must happen after consensus, outside the nondet block | non-determinism |
 | Errors | `raise gl.vm.UserError("CODE")`; catch `gl.vm.UserError` in deterministic code | error-handling |
@@ -121,6 +121,18 @@ Verified while building VerdictJudge (installed SDK + direct mode):
 | `gl.vm.UserError` | `raise gl.vm.UserError("PREFIX: CODE")` propagates to direct-mode `expect_revert` unchanged. Catching `KitError` then raising the classified string works. |
 | `unicodedata` | Vendor block imports it; genvm-lint passes. StudioNet runtime probe still pending (M9). |
 
+### 3.2 M7 implementation findings
+
+| Finding | Detail |
+|---|---|
+| Web response type | `genlayer/gl/nondet/web.py` defines `Response(status: int, headers: dict, body: bytes | None)`. The prose docs' `.status_code` is wrong for this runner; using it silently raised and the contract recorded `UNAVAILABLE` until direct tests caught it. |
+| Direct web mock | `direct_vm.mock_web(pattern, {"status": 200, "body": "<html>..."})`; strings are UTF-8 encoded by the test harness. |
+| Web inside nondet | Fetch and LLM calls are lexically inside `leader_fn`; validators re-run the same function and therefore re-fetch independently. |
+| P2 reuse | The contract calls the same vendored `compare_p2` that the acceptance matrix tests, so the deployed rule cannot drift from the documented pattern. |
+| Digest | `digest_hex` is bounded 32-bit FNV-1a over UTF-8. It is stored as snapshot metadata, never compared, and is explicitly not collision resistant. |
+| Page bound | Only the first 3000 characters of the decoded body are extracted or hashed; every claim about a page is therefore bounded and reproducible. |
+| URL freeze | The contract uses a small local URL freeze (scheme/host lowercase, fragment stripped, credentials rejected) instead of `normalize_url`, because `urllib.parse` is not yet verified in GenVM. |
+
 ## 4. Standard library availability
 
 The pinned CPython runner archive was inspected directly. `json` and `re` are present under
@@ -194,9 +206,48 @@ $ python3.12 -m pytest tests/matrices/test_vendored.py -q
 Purpose: attest a fixed fact set about a web page at a point in time, with P2 consensus and
 an append-only attestation record other contracts can read.
 
+State machine: a spec is frozen once; attestation 1 is `ACTIVE`; a challenge (or an
+`UNAVAILABLE` result) opens the next round; a challenge on an `ACTIVE` record moves it to
+`CHALLENGED`; rounds are capped at 16. Facts, source status, digest, and requester are
+append-only.
+
+Methods (source: `contracts/web_fact_attestor.py`):
+
+| Method | Kind | Access | Behavior |
+|---|---|---|---|
+| `create_spec(url, facts_json)` | write | anyone | Freezes an exact URL and 1-16 rules; returns the spec id |
+| `request_attestation(spec_id)` | write | anyone | Fetches, extracts, reaches P2 consensus, appends an attestation |
+| `challenge_attestation(attestation_id, reason)` | write | spec creator or requester | ACTIVE -> CHALLENGED; reason <= 280 bytes |
+| `get_spec`, `get_attestation`, `get_attestations`, `get_latest_attestation`, `get_config` | view | anyone | JSON strings; history is never overwritten |
+
+Fact rule kinds:
+
+- `BOOL_PRESENT_HEADING`: normalized heading equality from markdown or simple HTML headings.
+- `BOOL_CONTAINS_PHRASE`: normalized containment in visible page text.
+- `BUCKET_WORD_COUNT`: visible word count into explicit ascending integer edges.
+- `ENUM_FROM_LIST`: the only model-backed fact; the model picks from a frozen allowed list.
+
+A second `request_attestation` while the latest record is `ACTIVE` and `OK` raises
+`EXPECTED: INVALID_STATE`; a challenge or an `UNAVAILABLE` result opens the next round.
+Rate bound: 16 attestations per spec. Over-limit input raises `EXPECTED: OVER_LIMIT`.
+
 Consensus: leader fetches and extracts the frozen fact list; validators re-fetch and
-re-extract independently; every fact must match by its rule. `UNAVAILABLE` is recorded as
-its own state, never as a negative fact.
+re-extract independently; every fact must match by its own rule and source status must be
+exact. `UNAVAILABLE` is recorded as its own state with an empty fact set, never as a
+negative finding.
+
+M7 evidence:
+
+```text
+$ genvm-lint check contracts/web_fact_attestor.py --json
+{"ok":true,"lint":{"ok":true,"passed":3},"validate":{"ok":true,"contract":"WebFactAttestor","methods":8,"view_methods":5,"write_methods":3,"ctor_params":0,...}}
+
+$ python3.12 -m pytest tests/direct/test_web_fact_attestor.py -q
+13 passed
+
+$ python3.12 -m pytest tests/primitives tests/matrices tests/direct -q
+230 passed
+```
 
 Both contracts freeze their configuration at creation and store references plus short
 digests, not raw pages.

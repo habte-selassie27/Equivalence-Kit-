@@ -2,12 +2,13 @@
 
 ## Current state
 
-- Pass: 6
-- Current milestone: M7 — WebFactAttestor contract (lint clean, direct tests green)
-- Last completed milestone: M6 — VerdictJudge contract + vendored primitives + direct tests
+- Pass: 7
+- Current milestone: M8 — integration tests under real consensus
+- Last completed milestone: M7 — WebFactAttestor contract + direct tests + lint
 - Stall counter: 0
-- Last scores: 210 tests passed (55 primitives, 106 matrix cases, 13 direct, 31 vendored,
-  plus meta tests); lint clean; tightness 60/60 harmless accepted, 60/60 harmful rejected
+- Last scores: 230 tests passed (58 primitives, 106 matrix cases, 26 direct, 35 vendored,
+  plus meta tests); both contracts lint clean; tightness 60/60 harmless accepted,
+  60/60 harmful rejected
 
 ## Tooling
 
@@ -19,22 +20,20 @@ deploy/write/read proved on a probe contract.
 
 | Item | Source | Status |
 |---|---|---|
-| `run_nondet_unsafe` returns the decoded value directly (`_lazy_api` wraps `.get()`) | installed pinned SDK | VERIFIED |
-| Direct mode runs the leader only; `run_validator` replays the captured validator | gltest direct plugin | VERIFIED |
-| `DynArray()` and `DynArray[T]()` are not constructible; storage records take plain lists for `DynArray` fields | probe + direct tests | VERIFIED |
-| Nested `@allow_storage` records with `DynArray` fields survive append + `copy_to_memory` | VerdictJudge direct tests | VERIFIED |
-| `gl.vm.UserError` messages reach `expect_revert` unchanged | VerdictJudge direct tests | VERIFIED |
-| `@dataclass` needs `from dataclasses import dataclass` in contracts | lint + direct tests | VERIFIED |
-| Earlier ledger (header, storage, `__init__` required, web, StudioNet) | docs + probes | VERIFIED |
+| Web response is `Response(status, headers, body)`, not `.status_code` | installed pinned SDK; direct tests caught the docs mismatch | VERIFIED |
+| `direct_vm.mock_web(pattern, {"status": 200, "body": "..."})` | direct tests | VERIFIED |
+| P2 comparator can be vendored and reused verbatim in a contract | lint + direct + vendored tests | VERIFIED |
+| FNV-1a digest vectors and UTF-8 behavior | `tests/primitives/test_digest.py` | VERIFIED |
+| Earlier ledger (header, storage, `__init__` required, web, LLM, direct mode) | docs + probes + tests | VERIFIED |
 
 ## Latest evidence
 
 ```text
 $ python3.12 -m pytest tests/primitives tests/matrices tests/direct -q
-210 passed in 0.63s
+230 passed in 0.96s
 
-$ genvm-lint check contracts/verdict_judge.py --json
-{"ok":true,"lint":{"ok":true,"passed":3},"validate":{"ok":true,"contract":"VerdictJudge","methods":10,...}}
+$ genvm-lint check contracts/web_fact_attestor.py --json
+{"ok":true,"lint":{"ok":true,"passed":3},"validate":{"ok":true,"contract":"WebFactAttestor","methods":8,...}}
 
 $ python3.12 tools/tightness.py
 Harmless acceptance: 60/60
@@ -43,13 +42,14 @@ Harmful rejection: 60/60
 
 ## Open gaps
 
-1. Runtime probe for `unicodedata` in GenVM on StudioNet (M9; lint already accepts it).
-2. WebFactAttestor not written yet (M7).
-3. Integration tests under real consensus not written yet (M8).
-4. `initialize_consensus` / leader rotation behavior under sustained disagreement not tested
-   on StudioNet (M8/M9).
-5. Shipper/site is out of scope; UI.md section 19 only after M11.
+1. Runtime probe for `unicodedata` in GenVM on StudioNet (M8/M9).
+2. Integration tests under real consensus not written yet (M8).
+3. Real web/LLM provider behavior on StudioNet not exercised yet.
+4. Deployment addresses and schemas not recorded yet (M9).
+5. Testnet deployment is a hard stop until the user funds an account (M10).
+6. Shipper/site is out of scope; UI.md section 19 only after M11.
 
 ## Next step
 
-M7: `contracts/web_fact_attestor.py` using P2, mocked web/LLM direct tests, lint.
+M8: `tests/integration/` for both contracts on StudioNet; verify the integration API first;
+record real transaction output.

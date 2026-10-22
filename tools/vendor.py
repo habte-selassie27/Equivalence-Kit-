@@ -20,7 +20,15 @@ ROOT = Path(__file__).resolve().parent.parent
 PACKAGE = ROOT / "equivalencekit"
 CONTRACTS = ROOT / "contracts"
 
-MODULES = ("errors.py", "bounds.py", "normalize.py", "compare.py", "parsing.py")
+MODULES = (
+    "errors.py",
+    "bounds.py",
+    "normalize.py",
+    "digest.py",
+    "compare.py",
+    "parsing.py",
+    "patterns.py",
+)
 EXCLUDE_NAMES = {"normalize_url"}
 EXCLUDE_IMPORT_MODULES = {"urllib.parse", "__future__"}
 
