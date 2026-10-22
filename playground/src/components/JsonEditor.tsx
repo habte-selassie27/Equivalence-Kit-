@@ -1,6 +1,15 @@
 import { useId } from "react";
-import { formatBytes, parseJson } from "../lib/format";
+import { parseJson } from "../lib/format";
 import { MAX_EDITOR_CHARS } from "../lib/limits";
+
+/** Character count against the cap, always in characters (the cap is in characters). */
+function withCap(length: number): string {
+  const cap = MAX_EDITOR_CHARS.toLocaleString("en-US");
+  if (length <= MAX_EDITOR_CHARS) {
+    return `${length.toLocaleString("en-US")} of ${cap} characters`;
+  }
+  return `${length.toLocaleString("en-US")} characters — over the ${cap} cap`;
+}
 
 /**
  * A bounded JSON editor.
@@ -22,6 +31,7 @@ export function JsonEditor({
   hint?: string;
 }) {
   const id = useId();
+  const statusId = `${id}-status`;
   const tooLarge = value.length > MAX_EDITOR_CHARS;
   const parsed = parseJson(value);
   const invalid = !tooLarge && !parsed.ok;
@@ -39,11 +49,12 @@ export function JsonEditor({
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
         aria-invalid={invalid || tooLarge}
+        aria-describedby={statusId}
         rows={12}
       />
-      <div className="editor-status">
+      <div id={statusId} className="editor-status">
         <span className={tooLarge ? "status-bad" : "small muted"}>
-          {formatBytes(value.length)}
+          {withCap(value.length)}
         </span>
         {tooLarge ? (
           <span className="status-bad">

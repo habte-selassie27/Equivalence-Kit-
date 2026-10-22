@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { canonical, findPattern, matrices } from "../../data/load";
+import { canonical, findPattern, matrices, packageVersion } from "../../data/load";
 import { EmptyState, ErrorNotice } from "../../components/Notices";
 import { JsonEditor } from "../../components/JsonEditor";
 import { ReasonCode } from "../../components/ReasonCode";
@@ -13,11 +13,11 @@ import {
   LimitsNote,
   NOT_COMPARED_LINE,
 } from "../../components/LimitsNote";
-import { formatJson, parseJson } from "../../lib/format";
+import { categoryLabel, formatJson, parseJson } from "../../lib/format";
 import { MAX_SEED } from "../../lib/limits";
 import { buildShareLink, decodeState } from "../../lib/urlState";
 import { buildTrackSpec, describeField } from "../../lib/tracks";
-import { engine, EngineError } from "../../worker/engine";
+import { engine, EngineError, type EngineStatus } from "../../worker/engine";
 import type { CompareResult, PatternId } from "../../worker/protocol";
 import type { MatrixCase } from "../../data/types";
 
@@ -25,12 +25,16 @@ type Outcome =
   | { kind: "live"; result: CompareResult }
   | { kind: "precomputed"; ok: boolean; reason: string };
 
+/** Grouped Load case options: Must accept, Must reject, Boundary — UI.md 8.2. */
+const CASE_GROUPS = ["MUST_ACCEPT", "MUST_REJECT", "BOUNDARY"] as const;
+
 /**
  * Screen 2 — Playground.
  *
  * Edit a leader output and a validator output, run the real comparison, and see field by
  * field whether the rule accepts and why. When the engine cannot start, the screen falls
- * back to the stored matrix results and says so.
+ * back to the stored matrix results and says so; free-form runs are disabled in that
+ * state (UI.md 8.7).
  */
 export function PlaygroundScreen() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -38,32 +42,48 @@ export function PlaygroundScreen() {
   const caseId = searchParams.get("case");
 
   const matrix = matrices[patternId];
-  const initialCase = useMemo(
-    () => matrix?.cases.find((item) => item.id === caseId) ?? matrix?.cases[0] ?? null,
+  const requestedCase = useMemo(
+    () => matrix?.cases.find((item) => item.id === caseId) ?? null,
     [matrix, caseId],
   );
+  const initialCase = requestedCase ?? matrix?.cases[0] ?? null;
 
   const [leaderText, setLeaderText] = useState("");
   const [validatorText, setValidatorText] = useState("");
+  const [contextText, setContextText] = useState("");
+  const [loadedCase, setLoadedCase] = useState<MatrixCase | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [seed, setSeed] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
+  const [engineStatus, setEngineStatus] = useState<EngineStatus>(engine.getStatus());
+
+  useEffect(() => engine.onStatus(setEngineStatus), []);
+  useEffect(() => {
+    void engine.warmUp();
+  }, []);
+
+  const engineFailed = engineStatus === "failed";
 
   const loadCase = useCallback(
     (matrixCase: MatrixCase) => {
       setLeaderText(formatJson(matrixCase.leader));
       setValidatorText(formatJson(matrixCase.validator));
+      setContextText(formatJson(matrixCase.context));
+      setLoadedCase(matrixCase);
       setOutcome({
         kind: "precomputed",
         ok: matrixCase.expected === "ACCEPT",
         reason: matrixCase.reasonCode,
       });
       setError(null);
-      setSearchParams({ pattern: patternId, case: matrixCase.id });
+      const params = new URLSearchParams(searchParams);
+      params.set("pattern", patternId);
+      params.set("case", matrixCase.id);
+      setSearchParams(params, { replace: true });
     },
-    [patternId, setSearchParams],
+    [patternId, searchParams, setSearchParams],
   );
 
   // Load the case named in the URL, or a shared state, when the screen opens.
@@ -74,52 +94,42 @@ export function PlaygroundScreen() {
       if (decoded) {
         setLeaderText(decoded.leader);
         setValidatorText(decoded.validator);
+        setContextText(formatJson(canonical.patterns[patternId]?.context ?? {}));
+        setLoadedCase(null);
         setOutcome(null);
         return;
       }
     }
     if (initialCase) {
-      setLeaderText(formatJson(initialCase.leader));
-      setValidatorText(formatJson(initialCase.validator));
-      setOutcome({
-        kind: "precomputed",
-        ok: initialCase.expected === "ACCEPT",
-        reason: initialCase.reasonCode,
-      });
+      loadCase(initialCase);
     }
-  }, [initialCase, searchParams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patternId, caseId]);
 
   const spec = findPattern(patternId);
 
   const run = async () => {
     const leader = parseJson(leaderText);
     const validator = parseJson(validatorText);
+    const context = parseJson(contextText);
     if (!leader.ok || !validator.ok) {
       setError("This isn't valid JSON. Check the highlighted line.");
       return;
     }
+    if (engineFailed) return;
     setRunning(true);
     setError(null);
     try {
-      const context = canonical.patterns[patternId]?.context ?? {};
       const raw = await engine.send({
         kind: "compare",
         patternId,
         leader: leader.value,
         validator: validator.value,
-        context,
+        context: context.ok ? context.value : {},
       });
       setOutcome({ kind: "live", result: raw as CompareResult });
     } catch (caught) {
-      if (caught instanceof EngineError) {
-        setError(
-          caught.errorClass === "ENGINE"
-            ? "The engine couldn't start. Showing stored results only."
-            : `${caught.errorClass}: ${caught.reason}`,
-        );
-      } else {
-        setError("The engine couldn't start. Showing stored results only.");
-      }
+      setError(engineErrorMessage(caught, liveRunFailed));
     } finally {
       setRunning(false);
     }
@@ -131,6 +141,7 @@ export function PlaygroundScreen() {
       setError("This isn't valid JSON. Check the highlighted line.");
       return;
     }
+    if (engineFailed) return;
     setRunning(true);
     setError(null);
     try {
@@ -147,24 +158,43 @@ export function PlaygroundScreen() {
       setToast(mode === "harmless" ? "Harmless variation applied" : "Harmful variation applied");
       setTimeout(() => setToast(null), 2000);
     } catch (caught) {
-      setError(
-        caught instanceof EngineError
-          ? `${caught.errorClass}: ${caught.reason}`
-          : "The engine couldn't start. Showing stored results only.",
-      );
+      setError(engineErrorMessage(caught, variationFailed));
     } finally {
       setRunning(false);
     }
   };
 
+  const retryEngine = async () => {
+    setError(null);
+    await engine.retry();
+  };
+
   const copyAsTestCase = async () => {
-    const payload = JSON.stringify(
-      { pattern: patternId, leader: parseJson(leaderText), validator: parseJson(validatorText) },
-      null,
-      2,
-    );
+    const leader = parseJson(leaderText);
+    const validator = parseJson(validatorText);
+    const context = parseJson(contextText);
+    const body: Record<string, unknown> = {
+      id: loadedCase?.id ?? "manual",
+      category: loadedCase?.category ?? null,
+      title: loadedCase?.title ?? null,
+      leader: leader.ok ? leader.value : null,
+      validator: validator.ok ? validator.value : null,
+      context: context.ok ? context.value : null,
+      expected: null,
+      reasonCode: null,
+      packageVersion,
+      patternId,
+    };
+    if (outcome?.kind === "live") {
+      body.expected = outcome.result.ok ? "ACCEPT" : "REJECT";
+      body.reasonCode = outcome.result.reason;
+      body.category = body.category ?? "MANUAL";
+    } else if (outcome?.kind === "precomputed" && loadedCase) {
+      body.expected = loadedCase.expected;
+      body.reasonCode = loadedCase.reasonCode;
+    }
     try {
-      await navigator.clipboard.writeText(payload);
+      await navigator.clipboard.writeText(JSON.stringify(body, null, 2));
       setToast("Copied as test case");
     } catch {
       setToast("Copied as test case");
@@ -173,9 +203,14 @@ export function PlaygroundScreen() {
   };
 
   const copyShareLink = async () => {
-    const link = buildShareLink({ patternId, caseId, leader: leaderText, validator: validatorText });
+    const link = buildShareLink({
+      patternId,
+      caseId,
+      leader: leaderText,
+      validator: validatorText,
+    });
     if (!link) {
-      setError("Input is larger than the allowed size. Shorten it to continue.");
+      setError("This case is too large to share as a link. Use Copy as test case instead.");
       return;
     }
     try {
@@ -202,6 +237,9 @@ export function PlaygroundScreen() {
       ? outcome.result.ok
       : outcome.ok
     : null;
+  const overallReason =
+    outcome?.kind === "live" ? outcome.result.reason : (loadedCase?.reasonCode ?? "OK");
+  const isBoundaryCase = loadedCase?.category === "BOUNDARY";
 
   return (
     <div className="stack">
@@ -236,23 +274,42 @@ export function PlaygroundScreen() {
           </label>
           <select
             id="pg-case"
-            value={caseId ?? initialCase?.id ?? ""}
+            value={loadedCase?.id ?? caseId ?? ""}
             onChange={(event) => {
               const found = matrix?.cases.find((item) => item.id === event.target.value);
               if (found) loadCase(found);
             }}
           >
-            {matrix?.cases.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.id} — {item.title}
-              </option>
-            ))}
+            {CASE_GROUPS.map((group) => {
+              const cases = matrix?.cases.filter((item) => item.category === group) ?? [];
+              if (cases.length === 0) return null;
+              return (
+                <optgroup key={group} label={categoryLabel(group)}>
+                  {cases.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.id} — {item.title}
+                    </option>
+                  ))}
+                </optgroup>
+              );
+            })}
           </select>
         </div>
       </div>
 
       <div className="panel">
-        <div className="grid-2">
+        {engineFailed ? (
+          <ErrorNotice
+            message="The engine couldn't start. Showing stored results only. Free-form comparison is unavailable — try smaller inputs, then retry."
+            action={
+              <button type="button" className="btn small" onClick={retryEngine}>
+                Retry the engine
+              </button>
+            }
+          />
+        ) : null}
+
+        <div className="grid-3">
           <JsonEditor
             label="Leader output (JSON)"
             value={leaderText}
@@ -269,17 +326,32 @@ export function PlaygroundScreen() {
               setOutcome(null);
             }}
           />
+          <JsonEditor
+            label="Context (JSON)"
+            hint="Supplied by the contract: id universes, tolerance parameters, and code-decided results."
+            value={contextText}
+            onChange={setContextText}
+            disabled={engineFailed}
+          />
         </div>
 
         <div className="row actions">
-          <button type="button" className="btn btn-primary" onClick={run} disabled={running}>
+          {engineStatus === "loading" ? (
+            <span className="small muted engine-hint">Loading the engine…</span>
+          ) : null}
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={run}
+            disabled={running || engineFailed || !leaderValue.ok || !validatorValue.ok}
+          >
             {running ? "Running" : "Run comparison"}
           </button>
           <button
             type="button"
             className="btn"
             onClick={() => perturb("harmless")}
-            disabled={running}
+            disabled={running || engineFailed}
           >
             Apply harmless variation
           </button>
@@ -287,7 +359,7 @@ export function PlaygroundScreen() {
             type="button"
             className="btn"
             onClick={() => perturb("harmful")}
-            disabled={running}
+            disabled={running || engineFailed}
           >
             Apply harmful variation
           </button>
@@ -300,7 +372,24 @@ export function PlaygroundScreen() {
           <button type="button" className="btn" onClick={reset}>
             Reset
           </button>
-          <span className="small muted">seed {seed}</span>
+          <label className="field-label seed-label" htmlFor="pg-seed">
+            Seed
+          </label>
+          <input
+            id="pg-seed"
+            className="seed-input"
+            type="number"
+            min={0}
+            max={MAX_SEED}
+            value={seed}
+            disabled={engineFailed}
+            onChange={(event) => {
+              const next = Number(event.target.value);
+              if (Number.isFinite(next) && next >= 0 && next <= MAX_SEED) {
+                setSeed(Math.trunc(next));
+              }
+            }}
+          />
         </div>
 
         {error ? <ErrorNotice message={error} /> : null}
@@ -309,6 +398,13 @@ export function PlaygroundScreen() {
 
       <div className="panel">
         <h2 className="panel-title">Result</h2>
+        <p className="visually-hidden" role="status">
+          {outcome === null
+            ? "No comparison run yet."
+            : accepted
+              ? `Accepted, reason ${overallReason}`
+              : `Rejected, reason ${overallReason}`}
+        </p>
         {outcome === null ? (
           <EmptyState title="Run the comparison to see how each field is judged." />
         ) : (
@@ -323,20 +419,21 @@ export function PlaygroundScreen() {
                   stored result from the acceptance matrix
                 </span>
               ) : null}
-              {outcome.kind === "live" ? (
-                <ReasonCode reason={outcome.result.reason} />
-              ) : null}
+              <ReasonCode reason={overallReason} />
+              {isBoundaryCase ? <span className="edge-tag">on the edge</span> : null}
             </div>
 
             {fields.length > 0 && leaderValue.ok && validatorValue.ok ? (
               <div className="stack">
                 {fields.map((field) => {
+                  const contextValue = parseJson(contextText);
+                  const context = contextValue.ok ? contextValue.value : {};
                   const trackSpec = buildTrackSpec(
                     patternId,
                     field.name,
                     leaderValue.value,
                     validatorValue.value,
-                    canonical.patterns[patternId]?.context ?? {},
+                    context,
                   );
                   const track: TrackResult = describeField(
                     trackSpec,
@@ -378,7 +475,9 @@ export function PlaygroundScreen() {
       {spec ? (
         <div className="panel">
           <h2 className="panel-title">How this pattern is tuned</h2>
-          <p className="panel-note">{spec.toleranceRationale}</p>
+          <p className="panel-note">
+            <span>{INTEGERS_LINE}</span> {spec.toleranceRationale}
+          </p>
           <ul className="spec-list">
             {spec.invariants.map((invariant) => (
               <li key={invariant}>
@@ -386,12 +485,45 @@ export function PlaygroundScreen() {
               </li>
             ))}
           </ul>
+          <LimitBars loadedCase={loadedCase} />
         </div>
       ) : null}
 
       <LimitsNote line={HONESTY_LINE} />
-      <LimitsNote line={INTEGERS_LINE} />
-      <LimitsNote line={BOUNDARY_LINE} />
     </div>
   );
+}
+
+/** Copy deck lines that only appear when they are true for the loaded case. */
+function LimitBars({ loadedCase }: { loadedCase: MatrixCase | null }) {
+  return (
+    <>
+      {loadedCase?.category === "BOUNDARY" ? (
+        <LimitsNote line={BOUNDARY_LINE} />
+      ) : null}
+    </>
+  );
+}
+
+/* Error copy ---------------------------------------------------------------- */
+
+const liveRunFailed = "The run could not complete.";
+const variationFailed = "The variation could not be produced.";
+
+/**
+ * Turn an engine failure into copy from the deck, never a raw traceback. Classified
+ * failures from the package (for example LLM_ERROR: UNKNOWN_ENUM) keep their strings,
+ * because a builder needs the code; engine faults get the friendly line. A run that hit
+ * the time limit gets its own line, because the fix (smaller inputs) differs.
+ */
+function engineErrorMessage(caught: unknown, fallback: string): string {
+  if (caught instanceof EngineError) {
+    if (caught.errorClass === "ENGINE") {
+      return caught.reason === "TIMEOUT"
+        ? "The run took too long and was stopped. Try smaller inputs."
+        : `${fallback} Showing stored results only.`;
+    }
+    return `${caught.errorClass}: ${caught.reason}`;
+  }
+  return `${fallback} Showing stored results only.`;
 }

@@ -17,9 +17,12 @@ import p5 from "./matrices/P5.json";
 import p6 from "./matrices/P6.json";
 import type { CanonicalFile, MatrixFile, PatternsFile, ReportFile } from "./types";
 
-export const patterns: PatternsFile = patternsFile as PatternsFile;
-export const report: ReportFile = reportFile as ReportFile;
-export const canonical: CanonicalFile = canonicalFile as CanonicalFile;
+// The JSON is generated from the repo, so the literal-inferred shapes are converted
+// through `unknown`: the site data and these types agree because of the staleness
+// check, not because TypeScript can prove the JSON's exact contents.
+export const patterns = patternsFile as unknown as PatternsFile;
+export const report = reportFile as unknown as ReportFile;
+export const canonical = canonicalFile as unknown as CanonicalFile;
 
 export const matrices: Record<string, MatrixFile> = {
   P1: p1 as MatrixFile,

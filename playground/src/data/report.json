@@ -2,6 +2,25 @@
   "packageVersion": "0.1.0",
   "patterns": [
     {
+      "canonicalContext": {
+        "deterministic_checks": {
+          "check_hard": true
+        },
+        "forbidden": {
+          "check_hard": [
+            "ELIGIBLE"
+          ]
+        },
+        "provided_ids": [
+          "a",
+          "b",
+          "c"
+        ],
+        "verdict_set": [
+          "ELIGIBLE",
+          "INELIGIBLE"
+        ]
+      },
       "cases": 16,
       "counts": {
         "BOUNDARY": 4,
@@ -13,8 +32,39 @@
       "harmlessAccepted": 10,
       "harmlessTotal": 10,
       "matrixMatches": 16,
+      "paramVariants": {
+        "deterministic_checks": [
+          {
+            "check_hard": true
+          },
+          {
+            "check_hard": false
+          }
+        ],
+        "provided_ids": [
+          [
+            "a",
+            "b",
+            "c"
+          ],
+          [
+            "a"
+          ],
+          [
+            "a",
+            "b"
+          ]
+        ]
+      },
       "params": {
-        "deterministic_checks": "{'check_hard': True} | {'check_hard': False} | {'check_hard': True} | {'check_hard': True} | {'check_hard': True} | {'check_hard': True} | {'check_hard': False} | {'check_hard': True} | {'check_hard': True} | {'check_hard': True} | {'check_hard': True}",
+        "deterministic_checks": [
+          {
+            "check_hard": true
+          },
+          {
+            "check_hard": false
+          }
+        ],
         "forbidden": {
           "check_hard": [
             "ELIGIBLE"
@@ -33,6 +83,32 @@
       "patternId": "P1"
     },
     {
+      "canonicalContext": {
+        "rules": {
+          "has_pricing": {
+            "kind": "bool"
+          },
+          "heading_count": {
+            "delta": 1,
+            "kind": "int_abs"
+          },
+          "plan": {
+            "allowed": [
+              "FREE",
+              "PRO",
+              "ENTERPRISE"
+            ],
+            "kind": "enum"
+          },
+          "word_bucket": {
+            "edges": [
+              300,
+              1000
+            ],
+            "kind": "bucket"
+          }
+        }
+      },
       "cases": 18,
       "counts": {
         "BOUNDARY": 6,
@@ -44,37 +120,85 @@
       "harmlessAccepted": 10,
       "harmlessTotal": 10,
       "matrixMatches": 18,
+      "paramVariants": {
+        "rules": [
+          {
+            "has_pricing": {
+              "kind": "bool"
+            },
+            "heading_count": {
+              "delta": 1,
+              "kind": "int_abs"
+            },
+            "plan": {
+              "allowed": [
+                "FREE",
+                "PRO",
+                "ENTERPRISE"
+              ],
+              "kind": "enum"
+            },
+            "word_bucket": {
+              "edges": [
+                300,
+                1000
+              ],
+              "kind": "bucket"
+            }
+          },
+          {
+            "has_pricing": {
+              "kind": "bool"
+            }
+          }
+        ]
+      },
       "params": {
-        "rules": "{'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}}"
+        "rules": [
+          {
+            "has_pricing": {
+              "kind": "bool"
+            },
+            "heading_count": {
+              "delta": 1,
+              "kind": "int_abs"
+            },
+            "plan": {
+              "allowed": [
+                "FREE",
+                "PRO",
+                "ENTERPRISE"
+              ],
+              "kind": "enum"
+            },
+            "word_bucket": {
+              "edges": [
+                300,
+                1000
+              ],
+              "kind": "bucket"
+            }
+          },
+          {
+            "has_pricing": {
+              "kind": "bool"
+            }
+          }
+        ]
       },
       "patternId": "P2"
     },
     {
-      "cases": 18,
-      "counts": {
-        "BOUNDARY": 6,
-        "MUST_ACCEPT": 6,
-        "MUST_REJECT": 6
-      },
-      "harmfulRejected": 10,
-      "harmfulTotal": 10,
-      "harmlessAccepted": 10,
-      "harmlessTotal": 10,
-      "matrixMatches": 18,
-      "params": {
-        "delta": 5,
+      "canonicalContext": {
         "max": 1000,
         "min": 0,
-        "mode": "bps | abs | bps | bps | bps | bps | bps | abs | bps | bps | bps | bps | abs | abs",
-        "tolerance_bps": "100 | 10000 | 100 | 100",
+        "mode": "bps",
+        "tolerance_bps": 100,
         "unit_set": [
           "USD",
           "EUR"
         ]
       },
-      "patternId": "P3"
-    },
-    {
       "cases": 18,
       "counts": {
         "BOUNDARY": 6,
@@ -86,6 +210,94 @@
       "harmlessAccepted": 10,
       "harmlessTotal": 10,
       "matrixMatches": 18,
+      "paramVariants": {
+        "mode": [
+          "bps",
+          "abs"
+        ],
+        "tolerance_bps": [
+          100,
+          10000
+        ]
+      },
+      "params": {
+        "delta": 5,
+        "max": 1000,
+        "min": 0,
+        "mode": [
+          "abs",
+          "bps"
+        ],
+        "tolerance_bps": [
+          100,
+          10000
+        ],
+        "unit_set": [
+          "EUR",
+          "USD"
+        ]
+      },
+      "patternId": "P3"
+    },
+    {
+      "canonicalContext": {
+        "candidates": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "e"
+        ],
+        "k": 3,
+        "max_rank_distance": 1,
+        "min_overlap_pct": 66
+      },
+      "cases": 18,
+      "counts": {
+        "BOUNDARY": 6,
+        "MUST_ACCEPT": 6,
+        "MUST_REJECT": 6
+      },
+      "harmfulRejected": 10,
+      "harmfulTotal": 10,
+      "harmlessAccepted": 10,
+      "harmlessTotal": 10,
+      "matrixMatches": 18,
+      "paramVariants": {
+        "candidates": [
+          [
+            "a",
+            "b",
+            "c",
+            "d",
+            "e"
+          ],
+          [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          [
+            "a",
+            "b",
+            "c"
+          ]
+        ],
+        "k": [
+          3,
+          2
+        ],
+        "max_rank_distance": [
+          1,
+          0
+        ],
+        "min_overlap_pct": [
+          66,
+          100,
+          67
+        ]
+      },
       "params": {
         "candidates": [
           "a",
@@ -94,13 +306,26 @@
           "d",
           "e"
         ],
-        "k": "3 | 2 | 3",
-        "max_rank_distance": "1 | 0 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 0 | 1",
-        "min_overlap_pct": "66 | 100 | 66 | 66 | 66 | 66 | 66 | 66 | 66 | 67 | 100 | 100 | 100 | 66"
+        "k": [
+          2,
+          3
+        ],
+        "max_rank_distance": [
+          0,
+          1
+        ],
+        "min_overlap_pct": [
+          100,
+          66,
+          67
+        ]
       },
       "patternId": "P4"
     },
     {
+      "canonicalContext": {
+        "mode": "set_equal"
+      },
       "cases": 18,
       "counts": {
         "BOUNDARY": 6,
@@ -112,13 +337,43 @@
       "harmlessAccepted": 10,
       "harmlessTotal": 10,
       "matrixMatches": 18,
+      "paramVariants": {
+        "mode": [
+          "set_equal",
+          "overlap"
+        ],
+        "threshold_pct": [
+          50,
+          100,
+          51,
+          66,
+          67
+        ]
+      },
       "params": {
-        "mode": "set_equal | overlap | overlap | set_equal | set_equal | overlap | set_equal | set_equal | set_equal | overlap | overlap | overlap | overlap | set_equal | set_equal",
-        "threshold_pct": "50 | 100 | 51 | 50 | 51 | 66 | 67"
+        "mode": [
+          "overlap",
+          "set_equal"
+        ],
+        "threshold_pct": [
+          100,
+          50,
+          51,
+          66,
+          67
+        ]
       },
       "patternId": "P5"
     },
     {
+      "canonicalContext": {
+        "allow_unavailable": true,
+        "evidence_ids": [
+          "e1",
+          "e2",
+          "e3"
+        ]
+      },
       "cases": 18,
       "counts": {
         "BOUNDARY": 6,
@@ -130,8 +385,31 @@
       "harmlessAccepted": 10,
       "harmlessTotal": 10,
       "matrixMatches": 18,
+      "paramVariants": {
+        "allow_unavailable": [
+          true,
+          false
+        ],
+        "evidence_ids": [
+          [
+            "e1",
+            "e2",
+            "e3"
+          ],
+          [
+            "e1"
+          ],
+          [
+            "e1",
+            "e2"
+          ]
+        ]
+      },
       "params": {
-        "allow_unavailable": "True | False | True | True | True | True",
+        "allow_unavailable": [
+          false,
+          true
+        ],
         "evidence_ids": [
           "e1",
           "e2",

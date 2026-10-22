@@ -2,6 +2,25 @@
   "packageVersion": "0.1.0",
   "patterns": [
     {
+      "canonicalContext": {
+        "deterministic_checks": {
+          "check_hard": true
+        },
+        "forbidden": {
+          "check_hard": [
+            "ELIGIBLE"
+          ]
+        },
+        "provided_ids": [
+          "a",
+          "b",
+          "c"
+        ],
+        "verdict_set": [
+          "ELIGIBLE",
+          "INELIGIBLE"
+        ]
+      },
       "failureBehavior": "LLM_ERROR with a reason code; state unchanged.",
       "fields": [
         {
@@ -41,8 +60,39 @@
         "Cannot detect a consistently wrong verdict shared by every validator."
       ],
       "name": "Verdict plus band",
+      "paramVariants": {
+        "deterministic_checks": [
+          {
+            "check_hard": true
+          },
+          {
+            "check_hard": false
+          }
+        ],
+        "provided_ids": [
+          [
+            "a",
+            "b",
+            "c"
+          ],
+          [
+            "a"
+          ],
+          [
+            "a",
+            "b"
+          ]
+        ]
+      },
       "params": {
-        "deterministic_checks": "{'check_hard': True} | {'check_hard': False} | {'check_hard': True} | {'check_hard': True} | {'check_hard': True} | {'check_hard': True} | {'check_hard': False} | {'check_hard': True} | {'check_hard': True} | {'check_hard': True} | {'check_hard': True}",
+        "deterministic_checks": [
+          {
+            "check_hard": true
+          },
+          {
+            "check_hard": false
+          }
+        ],
         "forbidden": {
           "check_hard": [
             "ELIGIBLE"
@@ -63,6 +113,32 @@
       "whyNotStrictEq": "One band step and id ordering vary honestly between validators; digest prose always differs."
     },
     {
+      "canonicalContext": {
+        "rules": {
+          "has_pricing": {
+            "kind": "bool"
+          },
+          "heading_count": {
+            "delta": 1,
+            "kind": "int_abs"
+          },
+          "plan": {
+            "allowed": [
+              "FREE",
+              "PRO",
+              "ENTERPRISE"
+            ],
+            "kind": "enum"
+          },
+          "word_bucket": {
+            "edges": [
+              300,
+              1000
+            ],
+            "kind": "bucket"
+          }
+        }
+      },
       "failureBehavior": "EXTERNAL with SOURCE_UNREACHABLE; downstream treats it as insufficient evidence, never a negative finding.",
       "fields": [
         {
@@ -88,14 +164,87 @@
         "Does not verify that the page content is true."
       ],
       "name": "Fact set",
+      "paramVariants": {
+        "rules": [
+          {
+            "has_pricing": {
+              "kind": "bool"
+            },
+            "heading_count": {
+              "delta": 1,
+              "kind": "int_abs"
+            },
+            "plan": {
+              "allowed": [
+                "FREE",
+                "PRO",
+                "ENTERPRISE"
+              ],
+              "kind": "enum"
+            },
+            "word_bucket": {
+              "edges": [
+                300,
+                1000
+              ],
+              "kind": "bucket"
+            }
+          },
+          {
+            "has_pricing": {
+              "kind": "bool"
+            }
+          }
+        ]
+      },
       "params": {
-        "rules": "{'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}}"
+        "rules": [
+          {
+            "has_pricing": {
+              "kind": "bool"
+            },
+            "heading_count": {
+              "delta": 1,
+              "kind": "int_abs"
+            },
+            "plan": {
+              "allowed": [
+                "FREE",
+                "PRO",
+                "ENTERPRISE"
+              ],
+              "kind": "enum"
+            },
+            "word_bucket": {
+              "edges": [
+                300,
+                1000
+              ],
+              "kind": "bucket"
+            }
+          },
+          {
+            "has_pricing": {
+              "kind": "bool"
+            }
+          }
+        ]
       },
       "toleranceRationale": "Counts and dates are bucketed; headings use normalized keys and a documented alias table.",
       "useWhen": "Extracting a fixed set of structured facts from a web page or API.",
       "whyNotStrictEq": "Page markup, heading case, counts and fetch order vary between validators."
     },
     {
+      "canonicalContext": {
+        "max": 1000,
+        "min": 0,
+        "mode": "bps",
+        "tolerance_bps": 100,
+        "unit_set": [
+          "USD",
+          "EUR"
+        ]
+      },
       "failureBehavior": "LLM_ERROR OUT_OF_RANGE or WRONG_TYPE; state unchanged.",
       "fields": [
         {
@@ -122,15 +271,31 @@
         "A biased source that shifts every validator is not detected."
       ],
       "name": "Bounded number",
+      "paramVariants": {
+        "mode": [
+          "bps",
+          "abs"
+        ],
+        "tolerance_bps": [
+          100,
+          10000
+        ]
+      },
       "params": {
         "delta": 5,
         "max": 1000,
         "min": 0,
-        "mode": "bps | abs | bps | bps | bps | bps | bps | abs | bps | bps | bps | bps | abs | abs",
-        "tolerance_bps": "100 | 10000 | 100 | 100",
+        "mode": [
+          "abs",
+          "bps"
+        ],
+        "tolerance_bps": [
+          100,
+          10000
+        ],
         "unit_set": [
-          "USD",
-          "EUR"
+          "EUR",
+          "USD"
         ]
       },
       "toleranceRationale": "Tolerance comes from observed variation and is recorded as integer basis points.",
@@ -138,6 +303,18 @@
       "whyNotStrictEq": "Independent measurement and model runs differ by small integer amounts."
     },
     {
+      "canonicalContext": {
+        "candidates": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "e"
+        ],
+        "k": 3,
+        "max_rank_distance": 1,
+        "min_overlap_pct": 66
+      },
       "failureBehavior": "LLM_ERROR UNKNOWN_ID or TOPK_MISMATCH; state unchanged.",
       "fields": [
         {
@@ -156,6 +333,41 @@
         "A shared bias in candidate selection is invisible to the rule."
       ],
       "name": "Ranking",
+      "paramVariants": {
+        "candidates": [
+          [
+            "a",
+            "b",
+            "c",
+            "d",
+            "e"
+          ],
+          [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          [
+            "a",
+            "b",
+            "c"
+          ]
+        ],
+        "k": [
+          3,
+          2
+        ],
+        "max_rank_distance": [
+          1,
+          0
+        ],
+        "min_overlap_pct": [
+          66,
+          100,
+          67
+        ]
+      },
       "params": {
         "candidates": [
           "a",
@@ -164,15 +376,28 @@
           "d",
           "e"
         ],
-        "k": "3 | 2 | 3",
-        "max_rank_distance": "1 | 0 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 0 | 1",
-        "min_overlap_pct": "66 | 100 | 66 | 66 | 66 | 66 | 66 | 66 | 66 | 67 | 100 | 100 | 100 | 66"
+        "k": [
+          2,
+          3
+        ],
+        "max_rank_distance": [
+          0,
+          1
+        ],
+        "min_overlap_pct": [
+          100,
+          66,
+          67
+        ]
       },
       "toleranceRationale": "Near-ties swap inside the top-k; the overlap threshold and rank cap are explicit integers.",
       "useWhen": "Ordering candidates by a rubric.",
       "whyNotStrictEq": "Near-ties and tail order legitimately vary between model runs."
     },
     {
+      "canonicalContext": {
+        "mode": "set_equal"
+      },
       "failureBehavior": "LLM_ERROR WRONG_TYPE; state unchanged.",
       "fields": [
         {
@@ -191,15 +416,45 @@
         "Aliases not listed in the domain's alias table count as different entities."
       ],
       "name": "Entity set",
+      "paramVariants": {
+        "mode": [
+          "set_equal",
+          "overlap"
+        ],
+        "threshold_pct": [
+          50,
+          100,
+          51,
+          66,
+          67
+        ]
+      },
       "params": {
-        "mode": "set_equal | overlap | overlap | set_equal | set_equal | overlap | set_equal | set_equal | set_equal | overlap | overlap | overlap | overlap | set_equal | set_equal",
-        "threshold_pct": "50 | 100 | 51 | 50 | 51 | 66 | 67"
+        "mode": [
+          "overlap",
+          "set_equal"
+        ],
+        "threshold_pct": [
+          100,
+          50,
+          51,
+          66,
+          67
+        ]
       },
       "toleranceRationale": "Casing, whitespace and duplicates are noise; the overlap threshold is an explicit integer percentage.",
       "useWhen": "Extracting entities, names or ids where order does not matter.",
       "whyNotStrictEq": "Order, casing and duplicates vary without changing the extracted set."
     },
     {
+      "canonicalContext": {
+        "allow_unavailable": true,
+        "evidence_ids": [
+          "e1",
+          "e2",
+          "e3"
+        ]
+      },
       "failureBehavior": "EXTERNAL SOURCE_UNREACHABLE or LLM_ERROR; state unchanged.",
       "fields": [
         {
@@ -232,8 +487,31 @@
         "Cannot detect a shared wrong belief about the world."
       ],
       "name": "Boolean attestation",
+      "paramVariants": {
+        "allow_unavailable": [
+          true,
+          false
+        ],
+        "evidence_ids": [
+          [
+            "e1",
+            "e2",
+            "e3"
+          ],
+          [
+            "e1"
+          ],
+          [
+            "e1",
+            "e2"
+          ]
+        ]
+      },
       "params": {
-        "allow_unavailable": "True | False | True | True | True | True",
+        "allow_unavailable": [
+          false,
+          true
+        ],
         "evidence_ids": [
           "e1",
           "e2",

@@ -2,10 +2,16 @@ import { useEffect, useState } from "react";
 import { NavLink, Route, Routes } from "react-router-dom";
 import { packageVersion } from "../data/load";
 import { engine, type EngineStatus } from "../worker/engine";
+import { applyTheme, getThemeSetting, nextThemeSetting, subscribeSystemTheme, type ThemeSetting } from "../lib/theme";
+import { ThemeToggle } from "../components/ThemeToggle";
 import { PatternsScreen } from "../screens/Patterns/PatternsScreen";
 import { PlaygroundScreen } from "../screens/Playground/PlaygroundScreen";
 import { TightnessScreen } from "../screens/Tightness/TightnessScreen";
 import { DecisionGuideScreen } from "../screens/DecisionGuide/DecisionGuideScreen";
+
+/** The official Equivalence Principle page. Linked from the footer per UI.md 6. */
+const EQUIVALENCE_DOCS_URL =
+  "https://docs.genlayer.com/developers/intelligent-contracts/equivalence-principle";
 
 function EngineStatusLine({ status }: { status: EngineStatus }) {
   const label =
@@ -14,7 +20,7 @@ function EngineStatusLine({ status }: { status: EngineStatus }) {
       : status === "loading"
         ? "Loading the engine"
         : status === "failed"
-          ? "The engine couldn't start. Showing stored results only."
+          ? "Using precomputed results"
           : "Engine idle";
 
   return (
@@ -25,12 +31,24 @@ function EngineStatusLine({ status }: { status: EngineStatus }) {
         data-status={status}
       />
       {label}
+      {status === "failed" ? (
+        <button
+          type="button"
+          className="engine-retry"
+          onClick={() => {
+            void engine.retry();
+          }}
+        >
+          Retry
+        </button>
+      ) : null}
     </span>
   );
 }
 
 export function App() {
   const [status, setStatus] = useState<EngineStatus>(engine.getStatus());
+  const [themeSetting, setThemeSetting] = useState<ThemeSetting>(() => getThemeSetting());
 
   useEffect(() => engine.onStatus(setStatus), []);
 
@@ -40,8 +58,26 @@ export function App() {
     void engine.warmUp();
   }, []);
 
+  // The theme: stamp the attribute on every change, and re-stamp when the OS
+  // preference changes while the setting is "auto". The inline bootstrap in
+  // index.html already stamped it before first paint; this keeps it in step.
+  useEffect(() => {
+    applyTheme(themeSetting);
+  }, [themeSetting]);
+
+  useEffect(() => {
+    return subscribeSystemTheme(() => applyTheme(getThemeSetting()));
+  }, []);
+
+  const cycleTheme = () => {
+    setThemeSetting((current) => nextThemeSetting(current));
+  };
+
   return (
     <div className="app">
+      <a className="skip-link" href="#main">
+        Skip to main content
+      </a>
       <header className="app-header">
         <div className="app-header-inner">
           <NavLink to="/" className="brand">
@@ -54,13 +90,14 @@ export function App() {
             <NavLink to="/tightness">Tightness</NavLink>
             <NavLink to="/guide">Decision guide</NavLink>
           </nav>
-          <div style={{ marginLeft: "auto" }}>
+          <div className="header-controls">
+            <ThemeToggle setting={themeSetting} onCycle={cycleTheme} />
             <EngineStatusLine status={status} />
           </div>
         </div>
       </header>
 
-      <main className="app-main">
+      <main id="main" className="app-main">
         <Routes>
           <Route path="/" element={<PatternsScreen />} />
           <Route path="/playground" element={<PlaygroundScreen />} />
@@ -84,7 +121,12 @@ export function App() {
             These rules show how validators agree. They do not check whether content is
             true.
           </span>
-          <span className="mono small">equivalencekit {packageVersion}</span>
+          <span className="footer-links">
+            <a href={EQUIVALENCE_DOCS_URL} target="_blank" rel="noreferrer">
+              Equivalence Principle
+            </a>
+            <span className="mono small">equivalencekit {packageVersion}</span>
+          </span>
         </div>
       </footer>
     </div>

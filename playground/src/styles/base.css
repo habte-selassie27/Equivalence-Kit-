@@ -11,12 +11,23 @@ body {
   padding: 0;
 }
 
+html {
+  color-scheme: light dark;
+}
+
 body {
   background: var(--bench);
   color: var(--graphite);
   font-family: var(--font-ui);
   font-size: var(--text-base);
   line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--calibre-tint);
+  color: var(--graphite);
 }
 
 h1,
@@ -26,6 +37,8 @@ h4 {
   margin: 0;
   line-height: 1.2;
   font-weight: 700;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
 }
 
 h1 {
@@ -48,6 +61,12 @@ p {
 
 a {
   color: var(--calibre);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 code,
@@ -67,17 +86,19 @@ pre,
 }
 
 .app-header {
-  background: var(--sheet);
+  background: color-mix(in srgb, var(--sheet) 88%, transparent);
   border-bottom: var(--border);
   position: sticky;
   top: 0;
   z-index: 10;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .app-header-inner {
   max-width: var(--content-width);
   margin: 0 auto;
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-3) var(--space-5);
   display: flex;
   align-items: center;
   gap: var(--space-6);
@@ -90,13 +111,21 @@ pre,
   letter-spacing: -0.01em;
   text-decoration: none;
   color: var(--graphite);
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.brand:hover {
+  text-decoration: none;
 }
 
 .brand small {
-  display: block;
   font-weight: 400;
   font-size: var(--text-xs);
   color: var(--graphite-muted);
+  letter-spacing: 0;
+  margin-top: 2px;
 }
 
 .nav {
@@ -106,16 +135,19 @@ pre,
 }
 
 .nav a {
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-field);
   text-decoration: none;
   color: var(--graphite);
   font-size: var(--text-sm);
   font-weight: 500;
+  transition: background var(--speed-fast) var(--ease-out),
+    color var(--speed-fast) var(--ease-out);
 }
 
 .nav a:hover {
   background: var(--bench);
+  text-decoration: none;
 }
 
 .nav a[aria-current="page"] {
@@ -128,7 +160,23 @@ pre,
   max-width: var(--content-width);
   width: 100%;
   margin: 0 auto;
-  padding: var(--space-6) var(--space-5) var(--space-7);
+  padding: var(--space-6) var(--space-5) var(--space-8);
+}
+
+/* Every screen fades in once; the prefers-reduced-motion guard disables it. */
+.app-main > * {
+  animation: screen-rise var(--speed-slow) var(--ease-out) both;
+}
+
+@keyframes screen-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .app-footer {
@@ -142,23 +190,24 @@ pre,
   padding: var(--space-4) var(--space-5);
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: var(--space-4);
   flex-wrap: wrap;
   font-size: var(--text-sm);
   color: var(--graphite-muted);
 }
 
-/* Panels ------------------------------------------------------------------ */
+/* Panels: the printable sheet. One border, generous padding, no elevation. */
 
 .panel {
   background: var(--sheet);
   border: var(--border);
   border-radius: var(--radius-field);
-  padding: var(--space-5);
+  padding: var(--space-6);
 }
 
 .panel + .panel {
-  margin-top: var(--space-5);
+  margin-top: var(--space-4);
 }
 
 .panel-title {
@@ -166,10 +215,16 @@ pre,
   margin-bottom: var(--space-2);
 }
 
+h1.panel-title {
+  font-size: var(--text-2xl);
+  letter-spacing: -0.02em;
+}
+
 .panel-note {
   color: var(--graphite-muted);
   font-size: var(--text-sm);
   margin-bottom: var(--space-4);
+  max-width: 72ch;
 }
 
 /* Controls ---------------------------------------------------------------- */
@@ -194,32 +249,43 @@ textarea {
   cursor: pointer;
   font-size: var(--text-sm);
   font-weight: 500;
+  white-space: nowrap;
+  transition: background var(--speed-fast) var(--ease-out),
+    border-color var(--speed-fast) var(--ease-out),
+    transform var(--speed-fast) var(--ease-out);
 }
 
 .btn:hover:not(:disabled) {
   background: var(--bench);
+  border-color: var(--graphite-muted);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .btn:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
 .btn-primary {
-  background: var(--calibre);
-  border-color: var(--calibre);
+  background: var(--calibre-bg);
+  border-color: var(--calibre-bg);
   color: #fff;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #3f35a6;
+  background: var(--calibre-bg-hover);
+  border-color: var(--calibre-bg-hover);
 }
 
 .btn:focus-visible,
 a:focus-visible,
 select:focus-visible,
 input:focus-visible,
-textarea:focus-visible {
+textarea:focus-visible,
+button:focus-visible {
   outline: 2px solid var(--calibre);
   outline-offset: 2px;
 }
@@ -240,13 +306,28 @@ textarea {
   background: var(--sheet);
   padding: var(--space-2) var(--space-3);
   width: 100%;
+  transition: border-color var(--speed-fast) var(--ease-out);
+}
+
+select:hover {
+  border-color: var(--graphite-muted);
 }
 
 textarea {
   font-family: var(--font-mono);
   font-size: var(--text-sm);
-  line-height: 1.5;
+  line-height: 1.6;
   resize: vertical;
+  min-height: 11rem;
+}
+
+textarea[aria-invalid="true"] {
+  border-color: var(--reject);
+}
+
+::placeholder {
+  color: var(--graphite-muted);
+  opacity: 1;
 }
 
 /* Utilities --------------------------------------------------------------- */
@@ -278,10 +359,11 @@ textarea {
 
 .honesty {
   border-left: 3px solid var(--calibre);
-  padding: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
   color: var(--graphite-muted);
   font-size: var(--text-sm);
   background: var(--calibre-tint);
+  border-radius: 0 var(--radius-field) var(--radius-field) 0;
 }
 
 @media (max-width: 860px) {
@@ -290,9 +372,31 @@ textarea {
   }
 }
 
+@media (max-width: 720px) {
+  .app-header-inner {
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .app-main {
+    padding: var(--space-5) var(--space-4) var(--space-7);
+  }
+
+  .panel {
+    padding: var(--space-4);
+  }
+
+  h1.panel-title {
+    font-size: var(--text-xl);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  * {
-    animation: none !important;
-    transition: none !important;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

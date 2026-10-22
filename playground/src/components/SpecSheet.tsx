@@ -1,13 +1,16 @@
 import type { PatternSpec } from "../data/types";
+import { paramRows } from "../lib/params";
 
 /**
  * The pattern specification.
  *
- * Known limits are always expanded, never collapsed behind a disclosure. A builder
- * deciding whether to trust a rule needs to see what it cannot catch.
+ * Parameters are shown in plain terms with the values the matrix exercises, and the
+ * exact function names stay visible in the field table. Known limits are always
+ * expanded, never collapsed behind a disclosure: a builder deciding whether to trust
+ * a rule needs to see what it cannot catch.
  */
 export function SpecSheet({ spec }: { spec: PatternSpec }) {
-  const params = Object.entries(spec.params);
+  const rows = paramRows(spec.params, spec.paramVariants);
 
   return (
     <div className="spec-sheet">
@@ -22,6 +25,7 @@ export function SpecSheet({ spec }: { spec: PatternSpec }) {
             <th scope="col">Field</th>
             <th scope="col">Normalized by</th>
             <th scope="col">Compared by</th>
+            <th scope="col">Rule</th>
           </tr>
         </thead>
         <tbody>
@@ -40,6 +44,9 @@ export function SpecSheet({ spec }: { spec: PatternSpec }) {
                   <span className="small muted">not compared</span>
                 )}
               </td>
+              <td>
+                <span className="small muted">{field.explanation}</span>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -54,18 +61,40 @@ export function SpecSheet({ spec }: { spec: PatternSpec }) {
         ))}
       </ul>
 
-      {params.length > 0 ? (
+      {rows.length > 0 ? (
         <>
           <h4>Parameters in force</h4>
-          <ul className="spec-list">
-            {params.map(([key, value]) => (
-              <li key={key}>
-                <code className="small mono">
-                  {key} = {typeof value === "object" ? JSON.stringify(value) : String(value)}
-                </code>
-              </li>
-            ))}
-          </ul>
+          <table className="ledger param-table">
+            <caption className="visually-hidden">Comparator parameters in plain terms</caption>
+            <thead>
+              <tr>
+                <th scope="col">Parameter</th>
+                <th scope="col">Value</th>
+                <th scope="col">Varies by case</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.key}>
+                  <th scope="row" className="ledger-field">
+                    <code className="small mono">{row.key}</code>
+                  </th>
+                  <td>
+                    <span className="small">{row.phrase}</span>
+                  </td>
+                  <td>
+                    {row.variants ? (
+                      <span className="small param-variants">
+                        also exercised: {row.variants.join(" · ")}
+                      </span>
+                    ) : (
+                      <span className="small muted">one value</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </>
       ) : null}
 

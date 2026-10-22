@@ -38,11 +38,36 @@ PATTERN_IDS = ("P1", "P2", "P3", "P4", "P5", "P6")
 NOT_COMPARED_HINT = "Stored for humans; never compared in consensus."
 
 
+def _canonical_context(pattern_id: str) -> dict:
+    """The parameters in force in the canonical example for a pattern."""
+
+    canonical = json.loads((FIXTURE_DIR / "canonical.json").read_text())
+    return canonical[pattern_id]["context"]
+
+
+def _param_variants(pattern_id: str) -> dict:
+    """Keys whose context varies between matrix cases, with the values exercised.
+
+    The tolerance values on the edge are the interesting part for a reader tuning a rule,
+    so the site can show both the canonical parameters and the range the matrix runs.
+    """
+
+    data = json.loads((FIXTURE_DIR / f"{pattern_id}.json").read_text())
+    seen: dict = {}
+    for case in data["cases"]:
+        context = case.get("context") or {}
+        for key, value in context.items():
+            values = seen.setdefault(key, [])
+            if value not in values:
+                values.append(value)
+    return {key: values for key, values in seen.items() if len(values) > 1}
+
+
 def _params_from_context(pattern_id: str) -> dict:
     """Collect the real comparator parameters used by the pattern's matrix cases.
 
-    The parameters come from the fixtures the tests actually run, so the site shows the
-    parameters that are really in force rather than a hand-written copy.
+    Anything that varies per case becomes a unique sorted list of the exercised values;
+    the site renders variance explicitly instead of printing a pipe-joined dump.
     """
 
     data = json.loads((FIXTURE_DIR / f"{pattern_id}.json").read_text())
@@ -53,13 +78,34 @@ def _params_from_context(pattern_id: str) -> dict:
             if key not in merged:
                 merged[key] = value
             elif merged[key] != value:
-                # Parameters that vary per case are listed so the site can show the set.
                 if isinstance(merged[key], list) and isinstance(value, list):
-                    for item in value:
-                        if item not in merged[key]:
-                            merged[key].append(item)
+                    if all(isinstance(item, (str, bool)) for item in merged[key] + value):
+                        # Options and names: show the union of the exercised sets.
+                        for item in value:
+                            if item not in merged[key]:
+                                merged[key].append(item)
+                    else:
+                        # Numeric lists (bucket edges) are shaped data, not options:
+                        # keep every exercised shape.
+                        if value not in merged[key]:
+                            if merged[key] and isinstance(merged[key][0], list):
+                                merged[key].append(value)
+                            else:
+                                merged[key] = [merged[key], value]
+                elif isinstance(merged[key], list):
+                    # Scalar or dict variance into an existing option/type list.
+                    if value not in merged[key]:
+                        merged[key].append(value)
                 else:
-                    merged[key] = f"{merged[key]} | {value}"
+                    # Scalar or dict variance: become a list of the exercised variants.
+                    merged[key] = [merged[key], value]
+    # Round scalar variance cleanly: sort comparable scalar variants so the generated
+    # file is stable across runs.
+    for key, value in merged.items():
+        if isinstance(value, list) and all(
+            isinstance(item, (int, float, str, bool)) for item in value
+        ):
+            merged[key] = sorted(value, key=lambda item: (str(type(item)), str(item)))
     return merged
 
 
@@ -94,6 +140,8 @@ def _patterns_payload() -> dict:
                 "knownLimits": list(spec["known_limits"]),
                 "whyNotStrictEq": spec["why_not_strict_eq"],
                 "params": _params_from_context(pattern_id),
+                "paramVariants": _param_variants(pattern_id),
+                "canonicalContext": _canonical_context(pattern_id),
             }
         )
     return {"packageVersion": __version__, "patterns": patterns}
@@ -115,6 +163,8 @@ def _report_payload() -> dict:
                 "harmfulTotal": item["harmful_total"],
                 "matrixMatches": item["matrix_matches"],
                 "params": _params_from_context(pattern_id),
+                "paramVariants": _param_variants(pattern_id),
+                "canonicalContext": _canonical_context(pattern_id),
             }
         )
     return {"packageVersion": __version__, "patterns": patterns}

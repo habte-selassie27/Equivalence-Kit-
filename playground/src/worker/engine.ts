@@ -91,6 +91,10 @@ export class EngineClient {
     if (message.response.ok) {
       this.version = message.response.packageVersion;
       this.setStatus("ready");
+    } else if (this.status === "loading") {
+      // A failed response while still booting means the engine is unusable this
+      // session: the shell must show the precomputed state, not "loading" forever.
+      this.setStatus("failed");
     }
     entry.resolve(message.response);
   }
@@ -108,6 +112,12 @@ export class EngineClient {
     } catch {
       // The status line already reports the failure.
     }
+  }
+
+  /** Give the engine another chance after a failure or a timeout. */
+  async retry(): Promise<void> {
+    this.restart();
+    await this.warmUp();
   }
 
   /** Send a request, enforcing the size cap and the run time limit. */

@@ -1,7 +1,10 @@
+import { Link } from "react-router-dom";
 import { PerturbationBar } from "../../components/PerturbationBar";
-import { LimitsNote, HONESTY_LINE } from "../../components/LimitsNote";
 import { matrices, report } from "../../data/load";
 import { findPattern } from "../../data/load";
+import { paramRows } from "../../lib/params";
+import { categoryLabel } from "../../lib/format";
+import type { MatrixCase } from "../../data/types";
 
 /**
  * Screen 3 — Tightness report.
@@ -36,7 +39,7 @@ export function TightnessScreen() {
         <PerturbationBar
           label="Harmless variations accepted"
           accepted={totalHarmless}
-          rejected={totalHarmfulMax - totalHarmful}
+          rejected={totalHarmlessMax - totalHarmless}
           total={totalHarmlessMax}
         />
         <PerturbationBar
@@ -44,6 +47,8 @@ export function TightnessScreen() {
           accepted={totalHarmful}
           rejected={totalHarmfulMax - totalHarmful}
           total={totalHarmfulMax}
+          goodWord="rejected"
+          badWord="accepted"
         />
 
         <p className="small muted">{totalCases} acceptance matrix cases in total.</p>
@@ -57,9 +62,20 @@ export function TightnessScreen() {
         )}
       </div>
 
+      <div className="panel">
+        <h2 className="panel-title">How to read this</h2>
+        <p className="panel-note">
+          A harmless variation is noise an honest validator produces: reordered ids,
+          different casing, a value inside the tolerance. A harmful variation is a decision
+          flip, a hallucinated id, or a value past the edge. A 100 percent bar on both
+          rows means the rule accepts exactly the noise you tuned it for and nothing else.
+        </p>
+      </div>
+
       {report.patterns.map((item) => {
         const spec = findPattern(item.patternId);
         const matrix = matrices[item.patternId];
+        const rows = paramRows(item.params, item.paramVariants);
         return (
           <div key={item.patternId} className="panel">
             <h2 className="panel-title">
@@ -77,21 +93,41 @@ export function TightnessScreen() {
               accepted={item.harmfulRejected}
               rejected={item.harmfulTotal - item.harmfulRejected}
               total={item.harmfulTotal}
+              goodWord="rejected"
+              badWord="accepted"
             />
             <p className="small muted">
               {item.counts.MUST_ACCEPT} must accept, {item.counts.MUST_REJECT} must reject,{" "}
               {item.counts.BOUNDARY} on the edge.
             </p>
+
+            {rows.length > 0 ? (
+              <p className="small muted parameters-summary">
+                <strong>Parameters:</strong>{" "}
+                {rows.map((row) => row.phrase).join("; ")}.
+              </p>
+            ) : null}
+
             {matrix ? (
               <details className="boundary-details">
                 <summary>Boundary cases ({item.counts.BOUNDARY})</summary>
                 <ul className="spec-list">
                   {matrix.cases
-                    .filter((entry) => entry.category === "BOUNDARY")
+                    .filter((entry: MatrixCase) => entry.category === "BOUNDARY")
                     .map((entry) => (
-                      <li key={entry.id}>
+                      <li key={entry.id} className="boundary-case-row">
                         <code className="small mono">{entry.id}</code> {entry.title} —{" "}
-                        <code className="small mono">{entry.reasonCode}</code>
+                        <code className="small mono">{entry.reasonCode}</code>{" "}
+                        <span className="small muted">
+                          ({categoryLabel(entry.category)}, expected{" "}
+                          {entry.expected === "ACCEPT" ? "accept" : "reject"})
+                        </span>{" "}
+                        <Link
+                          className="case-link"
+                          to={`/playground?pattern=${item.patternId}&case=${entry.id}`}
+                        >
+                          Try in playground
+                        </Link>
                       </li>
                     ))}
                 </ul>
@@ -100,8 +136,6 @@ export function TightnessScreen() {
           </div>
         );
       })}
-
-      <LimitsNote line={HONESTY_LINE} />
     </div>
   );
 }

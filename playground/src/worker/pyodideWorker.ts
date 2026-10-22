@@ -44,7 +44,13 @@ let packageVersion = "unknown";
  * Load Pyodide, then write the package source into the in-memory filesystem and import
  * it as a normal package. Importing the real package (rather than a copy) is the point:
  * the site must show what the contracts actually do.
+ *
+ * The package lives at a clean in-FS path: sys.path entries are Unix paths inside the
+ * Pyodide filesystem, so the pkg URL the main thread sends is only used for fetching
+ * the source files, never as an import path.
  */
+const PKG_MOUNT = "/lib";
+
 async function loadEngine(): Promise<void> {
   if (pyodide) return;
 
@@ -64,10 +70,10 @@ async function loadEngine(): Promise<void> {
     files: string[];
   };
 
-  const root = `${pkgBaseValue}${manifest.package}`;
+  const root = `${PKG_MOUNT}/${manifest.package}`;
   instance.FS.mkdirTree(root);
   for (const file of manifest.files) {
-    const response = await fetch(`${root}/${file}`);
+    const response = await fetch(`${pkgBaseValue}${manifest.package}/${file}`);
     if (!response.ok) {
       throw new Error(`package file missing: ${file}`);
     }
@@ -76,13 +82,12 @@ async function loadEngine(): Promise<void> {
 
   await instance.runPythonAsync(`
 import sys
-sys.path.insert(0, "${root}")
+sys.path.insert(0, ${JSON.stringify(PKG_MOUNT)})
 from equivalencekit.patterns import compare_pattern
 from equivalencekit.perturb import harmless_variation, harmful_variation
 from equivalencekit.normalize import normalize_text, normalize_enum, normalize_bool
 from equivalencekit import __version__ as __ek_version__
 `);
-
   packageVersion = manifest.version;
 }
 
@@ -104,10 +109,14 @@ async function run(request: Request): Promise<Response> {
   const runtime = pyodide as Pyodide;
 
   try {
-    const result = await runtime.runPythonAsync(
+    const raw = (await runtime.runPythonAsync(
       buildPython(request),
-    ) as unknown;
-    return { ok: true, result, packageVersion };
+    )) as unknown;
+    // The Python side returns JSON strings (the same `json.dumps` the contracts use);
+    // parse here so callers receive structured results, never a bare string.
+    const parsed =
+      typeof raw === "string" ? (JSON.parse(raw) as unknown) : raw;
+    return { ok: true, result: parsed, packageVersion };
   } catch (error) {
     return { ok: false, ...classifyError(error) };
   }
@@ -116,8 +125,9 @@ async function run(request: Request): Promise<Response> {
 /**
  * Translate a Python exception into the package's error classes.
  *
- * The package raises `KitError` with a code like "LLM_ERROR: UNKNOWN_ENUM". Anything else
- * is an engine fault. Tracebacks never leave the worker.
+ * The package raises `KitError` with a code like "LLM_ERROR: UNKNOWN_ENUM". Anything
+ * else is an engine fault. Tracebacks never leave the worker: only the final exception
+ * line survives, stripped of frames and boilerplate.
  */
 function classifyError(error: unknown): {
   errorClass: "EXPECTED" | "EXTERNAL" | "TRANSIENT" | "LLM_ERROR" | "ENGINE";
@@ -131,12 +141,22 @@ function classifyError(error: unknown): {
       reason: match[2] as string,
     };
   }
-  return { errorClass: "ENGINE", reason: firstLine(text) };
+  return { errorClass: "ENGINE", reason: lastMeaningfulLine(text) };
 }
 
-function firstLine(text: string): string {
-  const line = text.split("\n").find((part) => part.trim().length > 0);
-  return (line ?? "unknown error").trim().slice(0, 200);
+/**
+ * The last informative line of a traceback ("NameError: name 'x' is not defined"),
+ * with frames and the "Traceback (most recent call last):" header removed.
+ */
+function lastMeaningfulLine(text: string): string {
+  const lines = text
+    .split("\n")
+    .filter((part) => part.trim().length > 0)
+    .filter((part) => !part.trim().startsWith("Traceback"))
+    .filter((part) => !part.trim().startsWith('File "'))
+    .filter((part) => !part.includes("runPythonAsync"))
+    .map((part) => part.trim());
+  return (lines.at(-1) ?? "unknown error").slice(0, 200);
 }
 
 /**

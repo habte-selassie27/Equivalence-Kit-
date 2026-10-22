@@ -26,6 +26,10 @@ export interface PatternSpec {
   knownLimits: string[];
   whyNotStrictEq: string;
   params: Record<string, unknown>;
+  /** Context keys the acceptance matrix exercises with more than one value. */
+  paramVariants?: Record<string, unknown[]>;
+  /** The context of the canonical example: the default parameters in force. */
+  canonicalContext?: unknown;
 }
 
 export interface PatternsFile {
@@ -62,6 +66,8 @@ export interface PatternReport {
   harmfulTotal: number;
   matrixMatches: number;
   params: Record<string, unknown>;
+  paramVariants?: Record<string, unknown[]>;
+  canonicalContext?: unknown;
 }
 
 export interface ReportFile {

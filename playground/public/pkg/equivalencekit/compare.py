@@ -242,6 +242,49 @@ def facts_match(leader, validator, rules) -> Comparison:
     return OK
 
 
+def normalize_facts(facts, rules) -> dict:
+    """Canonical form of a fact set: every value normalized by its own rule.
+
+    Raises ``KitError`` when a value is of the wrong type, out of range, or not in the
+    allowed set, and ``ValueError`` when the *rule* itself is malformed. The returned
+    dict has the same keys as the input, so a stored fact set always has a stable type:
+    a boolean is ``True``/``False``, an enum is the canonical label, a bucket is an int.
+    """
+
+    if not isinstance(facts, dict) or not isinstance(rules, dict):
+        raise KitError("LLM_ERROR", "WRONG_TYPE")
+    required = set(rules)
+    if set(facts) - required:
+        raise KitError("LLM_ERROR", "UNKNOWN_KEY")
+    if required - set(facts):
+        raise KitError("LLM_ERROR", "MISSING_KEY")
+
+    canonical = {}
+    for name in sorted(required):
+        rule = rules[name]
+        value = facts[name]
+        kind = rule.get("kind")
+        if kind == "bool":
+            canonical[name] = normalize_bool(value)
+        elif kind == "enum":
+            canonical[name] = normalize_enum(value, rule["allowed"], rule.get("aliases"))
+        elif kind == "bucket":
+            # A bucket fact holds the raw measurement; the comparator buckets it when
+            # comparing. Validate that the measurement buckets cleanly, but keep the
+            # measurement itself, which is the informative value.
+            bucketize(value, tuple(rule["edges"]))
+            canonical[name] = normalize_int(value)
+        elif kind == "int_abs":
+            canonical[name] = normalize_int(value)
+        elif kind == "int_bps":
+            canonical[name] = normalize_int(value)
+        elif kind == "text":
+            canonical[name] = normalize_text(value)
+        else:
+            raise ValueError(f"unknown fact rule kind: {kind!r}")
+    return canonical
+
+
 def validate_facts(facts, rules) -> Comparison:
     """Validate one fact set against its rules, without comparing it to another set.
 
@@ -254,40 +297,16 @@ def validate_facts(facts, rules) -> Comparison:
     written to storage.
     """
 
-    if not isinstance(facts, dict) or not isinstance(rules, dict):
+    try:
+        normalize_facts(facts, rules)
+    except KitError as error:
+        # A data problem. Keep the distinct reasons so a caller can tell a missing fact
+        # from an extra one.
+        if error.reason == "MISSING_KEY":
+            return _fail("FACT_MISSING")
+        if error.reason == "UNKNOWN_KEY":
+            return _fail("FACT_EXTRA")
         return _fail("FACT_MISMATCH")
-    required = set(rules)
-    if set(facts) - required:
-        return _fail("FACT_EXTRA")
-    if required - set(facts):
-        return _fail("FACT_MISSING")
-
-    for name in sorted(required):
-        rule = rules[name]
-        value = facts[name]
-        kind = rule.get("kind")
-        try:
-            if kind == "bool":
-                normalize_bool(value)
-            elif kind == "enum":
-                normalize_enum(value, rule["allowed"], rule.get("aliases"))
-            elif kind == "bucket":
-                bucketize(value, tuple(rule["edges"]))
-            elif kind == "int_abs":
-                normalize_int(value)
-            elif kind == "int_bps":
-                normalize_int(value)
-            elif kind == "text":
-                normalize_text(value)
-            else:
-                raise ValueError(f"unknown fact rule kind: {kind!r}")
-        except KitError:
-            # A data problem: wrong type, unknown enum, out of range.
-            return _fail("FACT_MISMATCH")
-        except (TypeError, ValueError):
-            # A malformed rule (unknown kind, empty allowed set) is a programming
-            # error, not a data problem; let it propagate.
-            raise
     return OK
 
 
