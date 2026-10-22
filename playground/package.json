@@ -9,11 +9,12 @@
     "predev": "npm run sync:pkg",
     "dev": "vite",
     "prebuild": "npm run sync:pkg",
-    "build": "tsc --noEmit && vite build",
+    "build": "npm run typecheck && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "npm run build && vitest run --config vitest.e2e.config.ts"
+    "test:e2e": "npm run build && vitest run --config vitest.e2e.config.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "react": "^19.0.0",

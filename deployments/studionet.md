@@ -14,12 +14,12 @@ hand-edit.
 | Field | Value |
 |---|---|
 | Contract file | `contracts/verdict_judge.py` |
-| Address | `0x34c97Ca059b36C967A11C4c4DE9bEE096e017A4a` |
-| Deploy tx | `0x5a2ee77cd53c6a337317c377d9bf59985b0057d96dab73994ecd71a868dc90d2` |
-| Explorer (address) | https://explorer-studio.genlayer.com/address/0x34c97Ca059b36C967A11C4c4DE9bEE096e017A4a |
-| Explorer (deploy tx) | https://explorer-studio.genlayer.com/tx/0x5a2ee77cd53c6a337317c377d9bf59985b0057d96dab73994ecd71a868dc90d2 |
+| Address | `0xE146BFb119D2cd9d909EcDA68bae69F29aFF326c` |
+| Deploy tx | `0xa76fac3170ca32f9569035d5fae86c4d7d6293de7007dde5d92381eb6ad70869` |
+| Explorer (address) | https://explorer-studio.genlayer.com/address/0xE146BFb119D2cd9d909EcDA68bae69F29aFF326c |
+| Explorer (deploy tx) | https://explorer-studio.genlayer.com/tx/0xa76fac3170ca32f9569035d5fae86c4d7d6293de7007dde5d92381eb6ad70869 |
 
-Deploy votes: `agree`, `agree`, `agree`, `agree`, `agree`
+Deploy votes: `agree`, `idle`, `agree`, `idle`, `agree`
 
 #### First read call — `get_config`
 
@@ -31,42 +31,42 @@ Deploy votes: `agree`, `agree`, `agree`, `agree`, `agree`
 
 Freezes the verdict set and a two-item rubric (one deterministic, one interpretive).
 
-- tx: `0xd8a4348dc43f84f548aa1d2ab57b8f55b13b90f613f0d8febcfcfef13342b28a`
-- explorer: https://explorer-studio.genlayer.com/tx/0xd8a4348dc43f84f548aa1d2ab57b8f55b13b90f613f0d8febcfcfef13342b28a
+- tx: `0x2aac8398b817413874d30ddca9331215d9b4cd59e217dd4d20984f8fac93611c`
+- explorer: https://explorer-studio.genlayer.com/tx/0x2aac8398b817413874d30ddca9331215d9b4cd59e217dd4d20984f8fac93611c
 - votes: `agree`, `agree`, `agree`, `agree`, `agree`
 
 #### Read back — `get_judgment(0)`
 
 ```json
-{"assessments": [], "challenge_reason": "", "creator": "0x38c69FE0E244CB4D3c41Df08418FCD8EE0Dd8c7e", "evidence": [], "judgment_id": 0, "round": 0, "rubric": [{"item_id": "hard_income", "kind": "DETERMINISTIC", "rule_count": 0, "rule_kind": "EVIDENCE_CONTAINS", "rule_value": "income", "text": "Evidence must mention income."}, {"item_id": "quality", "kind": "INTERPRETIVE", "rule_count": 0, "rule_kind": "NONE", "rule_value": "", "text": "Assess whether the evidence is sufficient and relevant."}], "rules": {"hard_income": ["ELIGIBLE"]}, "status": "OPEN", "title": "Income eligibility", "verdict_set": ["ELIGIBLE", "INELIGIBLE"]}
+{"assessments": [], "challenge_reason": "", "creator": "0xF3247827572c750eC34eb59FD5A02ac3A3D50Ae7", "evidence": [], "judgment_id": 0, "round": 0, "rubric": [{"item_id": "hard_income", "kind": "DETERMINISTIC", "rule_count": 0, "rule_kind": "EVIDENCE_CONTAINS", "rule_value": "income", "text": "Evidence must mention income."}, {"item_id": "quality", "kind": "INTERPRETIVE", "rule_count": 0, "rule_kind": "NONE", "rule_value": "", "text": "Assess whether the evidence is sufficient and relevant."}], "rules": {"hard_income": ["ELIGIBLE"]}, "status": "OPEN", "title": "Income eligibility", "verdict_set": ["ELIGIBLE", "INELIGIBLE"]}
 ```
 
 #### Write — `submit_evidence`
 
 Appends one evidence reference.
 
-- tx: `0x94639e4b44537ddf6e6b448c9e7cd2b4d85b3ce7f227a309be8835220e49a937`
-- explorer: https://explorer-studio.genlayer.com/tx/0x94639e4b44537ddf6e6b448c9e7cd2b4d85b3ce7f227a309be8835220e49a937
+- tx: `0xb9de18be794d0ba8479f4c7b7603c8218dcaf3754d26ea8ad55cc1d6a86d298e`
+- explorer: https://explorer-studio.genlayer.com/tx/0xb9de18be794d0ba8479f4c7b7603c8218dcaf3754d26ea8ad55cc1d6a86d298e
 - votes: `agree`, `agree`, `agree`, `agree`, `agree`
 
 #### Write — `evaluate`
 
 Runs the deterministic rubric check, then a P1 consensus round over the model's verdict. This is a real LLM consensus round.
 
-- tx: `0x304d14465fd62fd65d5e3f6bbfc5969f39ccb83571a6a6308c5efae29d5e488c`
-- explorer: https://explorer-studio.genlayer.com/tx/0x304d14465fd62fd65d5e3f6bbfc5969f39ccb83571a6a6308c5efae29d5e488c
-- votes: `agree`, `idle`, `agree`, `idle`, `agree`
+- tx: `0x7df45fdf51a925fff6ccc345b4861567bfa5bfcfb6690da44e0a78e9dcb347f8`
+- explorer: https://explorer-studio.genlayer.com/tx/0x7df45fdf51a925fff6ccc345b4861567bfa5bfcfb6690da44e0a78e9dcb347f8
+- votes: `idle`, `agree`, `agree`, `idle`, `agree`
 
 #### Read back — `get_assessments(0)`
 
 ```json
-[{"band": "HIGH", "cited_evidence_ids": ["ev0-0"], "cited_item_ids": ["hard_income", "quality"], "digest": "The evidence explicitly states a verified income of 5000 per year, satisfying all rubric requirements.", "round": 1, "verdict": "ELIGIBLE"}]
+[{"band": "HIGH", "cited_evidence_ids": ["ev0-0"], "cited_item_ids": ["hard_income"], "digest": "Income of 5000 per year is explicitly mentioned and verified in the evidence.", "round": 1, "verdict": "ELIGIBLE"}]
 ```
 
 #### Read back — `get_judgment(0)` after evaluation
 
 ```json
-{"assessments": [{"band": "HIGH", "cited_evidence_ids": ["ev0-0"], "cited_item_ids": ["hard_income", "quality"], "digest": "The evidence explicitly states a verified income of 5000 per year, satisfying all rubric requirements.", "round": 1, "verdict": "ELIGIBLE"}], "challenge_reason": "", "creator": "0x38c69FE0E244CB4D3c41Df08418FCD8EE0Dd8c7e", "evidence": [{"evidence_id": "ev0-0", "ref": "income is 5000 per year and verified", "submitted_by": "0x38c69FE0E244CB4D3c41Df08418FCD8EE0Dd8c7e"}], "judgment_id": 0, "round": 1, "rubric": [{"item_id": "hard_income", "kind": "DETERMINISTIC", "rule_count": 0, "rule_kind": "EVIDENCE_CONTAINS", "rule_value": "income", "text": "Evidence must mention income."}, {"item_id": "quality", "kind": "INTERPRETIVE", "rule_count": 0, "rule_kind": "NONE", "rule_value": "", "text": "Assess whether the evidence is sufficient and relevant."}], "rules": {"hard_income": ["ELIGIBLE"]}, "status": "EVALUATED", "title": "Income eligibility", "verdict_set": ["ELIGIBLE", "INELIGIBLE"]}
+{"assessments": [{"band": "HIGH", "cited_evidence_ids": ["ev0-0"], "cited_item_ids": ["hard_income"], "digest": "Income of 5000 per year is explicitly mentioned and verified in the evidence.", "round": 1, "verdict": "ELIGIBLE"}], "challenge_reason": "", "creator": "0xF3247827572c750eC34eb59FD5A02ac3A3D50Ae7", "evidence": [{"evidence_id": "ev0-0", "ref": "income is 5000 per year and verified", "submitted_by": "0xF3247827572c750eC34eb59FD5A02ac3A3D50Ae7"}], "judgment_id": 0, "round": 1, "rubric": [{"item_id": "hard_income", "kind": "DETERMINISTIC", "rule_count": 0, "rule_kind": "EVIDENCE_CONTAINS", "rule_value": "income", "text": "Evidence must mention income."}, {"item_id": "quality", "kind": "INTERPRETIVE", "rule_count": 0, "rule_kind": "NONE", "rule_value": "", "text": "Assess whether the evidence is sufficient and relevant."}], "rules": {"hard_income": ["ELIGIBLE"]}, "status": "EVALUATED", "title": "Income eligibility", "verdict_set": ["ELIGIBLE", "INELIGIBLE"]}
 ```
 
 #### Schema (saved from `genlayer schema <address>`)
@@ -150,12 +150,12 @@ Result:
 | Field | Value |
 |---|---|
 | Contract file | `contracts/web_fact_attestor.py` |
-| Address | `0xAeA5d7626807B1821837313cED685d97F73eA80D` |
-| Deploy tx | `0x8995b61f4aa65b2aadc9eecc4591033e96dee9fc2b44ac8642fe224f6f8d02c1` |
-| Explorer (address) | https://explorer-studio.genlayer.com/address/0xAeA5d7626807B1821837313cED685d97F73eA80D |
-| Explorer (deploy tx) | https://explorer-studio.genlayer.com/tx/0x8995b61f4aa65b2aadc9eecc4591033e96dee9fc2b44ac8642fe224f6f8d02c1 |
+| Address | `0x2fF79cbb75a781d7d5ba12A52792335b46AA312A` |
+| Deploy tx | `0xe6e8d2c8b83d4b87192279dae8767a9b42ea1a2fecc0ce8bce49909a4cd8e51d` |
+| Explorer (address) | https://explorer-studio.genlayer.com/address/0x2fF79cbb75a781d7d5ba12A52792335b46AA312A |
+| Explorer (deploy tx) | https://explorer-studio.genlayer.com/tx/0xe6e8d2c8b83d4b87192279dae8767a9b42ea1a2fecc0ce8bce49909a4cd8e51d |
 
-Deploy votes: `agree`, `agree`, `agree`, `agree`, `agree`
+Deploy votes: `agree`, `agree`, `agree`, `idle`, `idle`
 
 #### First read call — `get_config`
 
@@ -167,34 +167,34 @@ Deploy votes: `agree`, `agree`, `agree`, `agree`, `agree`
 
 Freezes the URL and three fact rules (heading, phrase, word-count bucket).
 
-- tx: `0x88e1eeea28f789f4aeeca352194b100b5fa94e6a29d3e24f5e1a40962efb2f31`
-- explorer: https://explorer-studio.genlayer.com/tx/0x88e1eeea28f789f4aeeca352194b100b5fa94e6a29d3e24f5e1a40962efb2f31
+- tx: `0xccf438031f0a267a79ad27127ad7275a244d6cc15654c67770e083d0f5e56471`
+- explorer: https://explorer-studio.genlayer.com/tx/0xccf438031f0a267a79ad27127ad7275a244d6cc15654c67770e083d0f5e56471
 - votes: `agree`, `agree`, `agree`, `agree`, `agree`
 
 #### Read back — `get_spec(0)`
 
 ```json
-{"attestation_ids": [], "creator": "0x38c69FE0E244CB4D3c41Df08418FCD8EE0Dd8c7e", "rules": [{"allowed": [], "edges": [], "kind": "BOOL_PRESENT_HEADING", "name": "has_heading", "param": "Example Domain"}, {"allowed": [], "edges": [], "kind": "BOOL_CONTAINS_PHRASE", "name": "mentions_documentation", "param": "documentation examples"}, {"allowed": [], "edges": [10, 100], "kind": "BUCKET_WORD_COUNT", "name": "word_bucket", "param": ""}], "spec_id": 0, "url": "https://example.com/"}
+{"attestation_ids": [], "creator": "0xF3247827572c750eC34eb59FD5A02ac3A3D50Ae7", "rules": [{"allowed": [], "edges": [], "kind": "BOOL_PRESENT_HEADING", "name": "has_heading", "param": "Example Domain"}, {"allowed": [], "edges": [], "kind": "BOOL_CONTAINS_PHRASE", "name": "mentions_documentation", "param": "documentation examples"}, {"allowed": [], "edges": [10, 100], "kind": "BUCKET_WORD_COUNT", "name": "word_bucket", "param": ""}], "spec_id": 0, "url": "https://example.com/"}
 ```
 
 #### Write — `request_attestation`
 
 Fetches the live page, extracts the facts in code, and reaches P2 consensus. Validators re-fetch the page independently.
 
-- tx: `0x58f0a92c9853a5073bc12b5570f8e32c13e873a28476627f540fad027a61b44c`
-- explorer: https://explorer-studio.genlayer.com/tx/0x58f0a92c9853a5073bc12b5570f8e32c13e873a28476627f540fad027a61b44c
-- votes: `agree`, `agree`, `agree`, `idle`, `agree`
+- tx: `0x6a707d2cfae71b806ee69d85ff1c542ef5acdc4577f05913fb6d1fef41f95226`
+- explorer: https://explorer-studio.genlayer.com/tx/0x6a707d2cfae71b806ee69d85ff1c542ef5acdc4577f05913fb6d1fef41f95226
+- votes: `idle`, `agree`, `agree`, `idle`, `agree`
 
 #### Read back — `get_latest_attestation(0)`
 
 ```json
-{"attestation_id": 0, "challenge_reason": "", "facts": {"has_heading": false, "mentions_documentation": true, "word_bucket": 1}, "requested_by": "0x38c69FE0E244CB4D3c41Df08418FCD8EE0Dd8c7e", "round": 1, "snapshot_digest": "d7ee97cd", "source_status": "OK", "spec_id": 0, "status": "ACTIVE"}
+{"attestation_id": 0, "challenge_reason": "", "facts": {"has_heading": false, "mentions_documentation": true, "word_bucket": 1}, "requested_by": "0xF3247827572c750eC34eb59FD5A02ac3A3D50Ae7", "round": 1, "snapshot_digest": "d7ee97cd", "source_status": "OK", "spec_id": 0, "status": "ACTIVE"}
 ```
 
 #### Read back — `get_attestations(0)`
 
 ```json
-[{"attestation_id": 0, "challenge_reason": "", "facts": {"has_heading": false, "mentions_documentation": true, "word_bucket": 1}, "requested_by": "0x38c69FE0E244CB4D3c41Df08418FCD8EE0Dd8c7e", "round": 1, "snapshot_digest": "d7ee97cd", "source_status": "OK", "spec_id": 0, "status": "ACTIVE"}]
+[{"attestation_id": 0, "challenge_reason": "", "facts": {"has_heading": false, "mentions_documentation": true, "word_bucket": 1}, "requested_by": "0xF3247827572c750eC34eb59FD5A02ac3A3D50Ae7", "round": 1, "snapshot_digest": "d7ee97cd", "source_status": "OK", "spec_id": 0, "status": "ACTIVE"}]
 ```
 
 #### Schema (saved from `genlayer schema <address>`)
