@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.env
+artifacts/
+playground/node_modules/
+playground/dist/
+.coverage
+htmlcov/
