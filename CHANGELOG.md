@@ -103,6 +103,17 @@ All notable changes to EquivalenceKit are recorded here. Format follows Keep a C
 - `docs/pattern-catalog.md`, `docs/decision-guide.md`, `docs/tightness-testing.md`,
   `docs/anti-patterns.md`, `docs/threat-model.md`, `README.md`, `CHANGELOG.md`.
 
+### Added — M12 RankingJudge (stretch)
+- `contracts/ranking_judge.py`: P4 consensus with frozen candidate universe, rubric, and
+  ranking parameters (top-k, overlap threshold, optional rank-distance cap). State machine:
+  `OPEN -> RANKED -> CHALLENGED -> RANKED (round + 1) -> ... -> CLOSED`. Append-only
+  ranking history. 11 direct tests.
+- Design decisions for the open questions in AGENTS.md section 15: tie handling via
+  deduplication preserving first occurrence; candidate universe frozen at creation;
+  rank-distance cap optional (0 = no cap).
+- `docs/contracts.md`: RankingJudge section with methods, limits, and design decisions.
+- `README.md`: RankingJudge summary.
+
 ## Milestone status
 
 | # | Milestone | Status |
@@ -118,4 +129,4 @@ All notable changes to EquivalenceKit are recorded here. Format follows Keep a C
 | M9 | StudioNet deployment with saved schemas | done |
 | M10 | Testnet deployment (requires funded account) | blocked on user |
 | M11 | Documentation | done |
-| M12 | RankingJudge stretch | not started |
+| M12 | RankingJudge stretch | done |

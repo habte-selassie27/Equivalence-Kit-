@@ -266,6 +266,56 @@ $ python3.12 -m pytest tests/primitives tests/matrices tests/direct -q
 Both contracts freeze their configuration at creation and store references plus short
 digests, not raw pages.
 
+### RankingJudge
+
+Purpose: a reusable ranking primitive. A creator freezes a candidate universe, a rubric,
+and ranking parameters (top-k, overlap threshold, optional rank-distance cap). Participants
+append evidence references, and the contract produces an append-only ranking history.
+
+State machine: `OPEN -> RANKED -> CHALLENGED -> RANKED (round + 1) -> ... -> CLOSED`.
+Every other transition raises `EXPECTED: INVALID_STATE`. Rankings are append-only.
+
+Methods (source: `contracts/ranking_judge.py`):
+
+| Method | Kind | Access | Behavior |
+|---|---|---|---|
+| `create_ranking(title, candidates_csv, rubric_json, top_k, min_overlap_pct, max_rank_distance)` | write | anyone | Freezes the candidate universe and parameters; returns the id |
+| `submit_evidence(ranking_id, ref)` | write | creator always; others while OPEN | Appends an evidence reference; max 64 refs |
+| `rank(ranking_id)` | write | anyone | Runs P4 consensus; appends a ranking |
+| `challenge(ranking_id, reason)` | write | creator | RANKED -> CHALLENGED; reason <= 280 bytes |
+| `re_rank(ranking_id)` | write | anyone | CHALLENGED -> RANKED; appends the next round |
+| `close(ranking_id)` | write | creator | RANKED -> CLOSED |
+| `get_ranking`, `get_rankings`, `get_evidence`, `get_config` | view | anyone | JSON strings; history is never overwritten |
+
+Limits: 64 candidates, 8 rounds, 16 stored rankings, 64 evidence refs, 16 KiB rubric JSON,
+160-byte title, 512-byte reference, 280-byte reason. Over-limit input raises
+`EXPECTED: OVER_LIMIT`; malformed input raises `EXPECTED: INVALID_ARGUMENT`.
+
+Design decisions (open questions from AGENTS.md section 15, now resolved):
+
+- **Tie handling:** `normalize_ranked_id_list` deduplicates preserving first occurrence.
+  Ties are broken by the model's ordering; the overlap threshold and rank-distance cap
+  absorb legitimate swaps.
+- **Candidate universe freezing:** frozen at creation and immutable. `subset_of` rejects any
+  id outside it — the key anti-hallucination invariant for rankings.
+- **Rank distance cap:** optional. `0` means no cap; any positive value caps the rank
+  distance for entities that appear in both top-k lists.
+
+Consensus: the model proposes `{ranking, digest}`; validators independently re-rank and
+compare with P4 (all ids in the candidate universe; top-k overlap meets the threshold;
+rank distance within the cap). The digest is stored but never compared.
+
+M12 evidence:
+
+```text
+$ genvm-lint check contracts/ranking_judge.py --json
+{"ok":true,"lint":{"ok":true,"passed":3},"validate":{"ok":true,"contract":"RankingJudge","methods":10,...}}
+
+$ python3.12 -m pytest tests/direct/test_ranking_judge.py -q
+11 passed
+```
+
+
 ## 6. Live deployments (StudioNet)
 
 Deployed 2026-10-22 by `tests/deploy/test_studionet_deployment.py`; the full record,

@@ -96,10 +96,12 @@ extracted **in code**, so prompt injection in the page cannot change them. Valid
 the page independently and compare fact-by-fact. `UNAVAILABLE` is a first-class state with an
 empty fact set — a failed fetch is never recorded as a negative finding.
 
-### `contracts/fixtures/consensus_probe.py`
+### `contracts/ranking_judge.py`
 
-A test-only contract with fixed leader/validator outputs, used to prove under real StudioNet
-consensus that the P1 rule accepts honest one-step band noise and rejects a wrong verdict.
+A reusable ranking primitive (P4). A creator freezes a candidate universe, a rubric, and
+ranking parameters (top-k, overlap threshold, optional rank-distance cap). Participants
+append evidence references, and the contract produces an append-only ranking history. State
+machine: `OPEN -> RANKED -> CHALLENGED -> RANKED (round + 1) -> ... -> CLOSED`.
 
 ## Live deployments (StudioNet)
 
