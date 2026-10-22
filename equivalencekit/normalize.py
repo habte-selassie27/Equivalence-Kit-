@@ -200,6 +200,29 @@ def normalize_id_list(values, max_items: int = MAX_IDS, max_len: int = MAX_ID_LE
     return tuple(sorted(seen))
 
 
+def normalize_ranked_id_list(values, max_items: int = MAX_IDS, max_len: int = MAX_ID_LEN) -> tuple:
+    """Canonical ranked id tuple: validated, deduped preserving first rank, bounded."""
+
+    if isinstance(values, (str, bytes)) or not isinstance(values, (list, tuple)):
+        raise KitError("LLM_ERROR", "WRONG_TYPE")
+    if len(values) > max_items:
+        raise KitError("EXPECTED", "OVER_LIMIT")
+
+    seen = set()
+    result = []
+    for item in values:
+        if not isinstance(item, str):
+            raise KitError("LLM_ERROR", "WRONG_TYPE")
+        token = item.strip()
+        if utf8_len(token) > max_len or not re.fullmatch(ID_RE, token):
+            raise KitError("LLM_ERROR", "UNKNOWN_ID")
+        if token in seen:
+            continue
+        seen.add(token)
+        result.append(token)
+    return tuple(result)
+
+
 def normalize_url(value: str) -> str:
     """Canonical URL key: lower scheme/host, no fragment, no credentials, no tracking."""
 
