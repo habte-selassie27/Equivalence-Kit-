@@ -18,9 +18,16 @@ from equivalencekit.perturb import harmful_variation, harmless_variation  # noqa
 
 FIXTURE_DIR = ROOT / "tests" / "matrices"
 PATTERN_IDS = ("P1", "P2", "P3", "P4", "P5", "P6")
+SEEDS = 10
 
 
-def main() -> int:
+def build_report() -> dict:
+    """Compute the tightness report from the real fixtures.
+
+    Shared by `tools/tightness.py` (prints it) and `tools/export_site_data.py` (exports
+    it to the playground), so the site and the terminal always report the same numbers.
+    """
+
     canonical = json.loads((FIXTURE_DIR / "canonical.json").read_text())
     report = {}
     for pattern_id in PATTERN_IDS:
@@ -40,8 +47,7 @@ def main() -> int:
 
         harmless_ok = 0
         harmful_ok = 0
-        seeds = 10
-        for seed in range(seeds):
+        for seed in range(SEEDS):
             variant = harmless_variation(pattern_id, canonical[pattern_id]["output"], seed)
             if compare_pattern(pattern_id, canonical[pattern_id]["output"], variant, canonical[pattern_id]["context"])["ok"]:
                 harmless_ok += 1
@@ -54,12 +60,16 @@ def main() -> int:
             "counts": counts,
             "matrix_matches": accepted + rejected,
             "harmless_accepted": harmless_ok,
-            "harmless_total": seeds,
+            "harmless_total": SEEDS,
             "harmful_rejected": harmful_ok,
-            "harmful_total": seeds,
+            "harmful_total": SEEDS,
             "tolerances": data["description"],
         }
+    return report
 
+
+def main() -> int:
+    report = build_report()
     if "--json" in sys.argv:
         print(json.dumps(report, indent=2, sort_keys=True))
         return 0

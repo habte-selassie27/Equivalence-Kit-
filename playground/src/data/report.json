@@ -1,0 +1,144 @@
+{
+  "packageVersion": "0.1.0",
+  "patterns": [
+    {
+      "cases": 16,
+      "counts": {
+        "BOUNDARY": 4,
+        "MUST_ACCEPT": 6,
+        "MUST_REJECT": 6
+      },
+      "harmfulRejected": 10,
+      "harmfulTotal": 10,
+      "harmlessAccepted": 10,
+      "harmlessTotal": 10,
+      "matrixMatches": 16,
+      "params": {
+        "deterministic_checks": "{'check_hard': True} | {'check_hard': False} | {'check_hard': True} | {'check_hard': True} | {'check_hard': True} | {'check_hard': True} | {'check_hard': False} | {'check_hard': True} | {'check_hard': True} | {'check_hard': True} | {'check_hard': True}",
+        "forbidden": {
+          "check_hard": [
+            "ELIGIBLE"
+          ]
+        },
+        "provided_ids": [
+          "a",
+          "b",
+          "c"
+        ],
+        "verdict_set": [
+          "ELIGIBLE",
+          "INELIGIBLE"
+        ]
+      },
+      "patternId": "P1"
+    },
+    {
+      "cases": 18,
+      "counts": {
+        "BOUNDARY": 6,
+        "MUST_ACCEPT": 6,
+        "MUST_REJECT": 6
+      },
+      "harmfulRejected": 10,
+      "harmfulTotal": 10,
+      "harmlessAccepted": 10,
+      "harmlessTotal": 10,
+      "matrixMatches": 18,
+      "params": {
+        "rules": "{'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}, 'plan': {'kind': 'enum', 'allowed': ['FREE', 'PRO', 'ENTERPRISE']}, 'word_bucket': {'kind': 'bucket', 'edges': [300, 1000]}, 'heading_count': {'kind': 'int_abs', 'delta': 1}} | {'has_pricing': {'kind': 'bool'}}"
+      },
+      "patternId": "P2"
+    },
+    {
+      "cases": 18,
+      "counts": {
+        "BOUNDARY": 6,
+        "MUST_ACCEPT": 6,
+        "MUST_REJECT": 6
+      },
+      "harmfulRejected": 10,
+      "harmfulTotal": 10,
+      "harmlessAccepted": 10,
+      "harmlessTotal": 10,
+      "matrixMatches": 18,
+      "params": {
+        "delta": 5,
+        "max": 1000,
+        "min": 0,
+        "mode": "bps | abs | bps | bps | bps | bps | bps | abs | bps | bps | bps | bps | abs | abs",
+        "tolerance_bps": "100 | 10000 | 100 | 100",
+        "unit_set": [
+          "USD",
+          "EUR"
+        ]
+      },
+      "patternId": "P3"
+    },
+    {
+      "cases": 18,
+      "counts": {
+        "BOUNDARY": 6,
+        "MUST_ACCEPT": 6,
+        "MUST_REJECT": 6
+      },
+      "harmfulRejected": 10,
+      "harmfulTotal": 10,
+      "harmlessAccepted": 10,
+      "harmlessTotal": 10,
+      "matrixMatches": 18,
+      "params": {
+        "candidates": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "e"
+        ],
+        "k": "3 | 2 | 3",
+        "max_rank_distance": "1 | 0 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 0 | 1",
+        "min_overlap_pct": "66 | 100 | 66 | 66 | 66 | 66 | 66 | 66 | 66 | 67 | 100 | 100 | 100 | 66"
+      },
+      "patternId": "P4"
+    },
+    {
+      "cases": 18,
+      "counts": {
+        "BOUNDARY": 6,
+        "MUST_ACCEPT": 6,
+        "MUST_REJECT": 6
+      },
+      "harmfulRejected": 10,
+      "harmfulTotal": 10,
+      "harmlessAccepted": 10,
+      "harmlessTotal": 10,
+      "matrixMatches": 18,
+      "params": {
+        "mode": "set_equal | overlap | overlap | set_equal | set_equal | overlap | set_equal | set_equal | set_equal | overlap | overlap | overlap | overlap | set_equal | set_equal",
+        "threshold_pct": "50 | 100 | 51 | 50 | 51 | 66 | 67"
+      },
+      "patternId": "P5"
+    },
+    {
+      "cases": 18,
+      "counts": {
+        "BOUNDARY": 6,
+        "MUST_ACCEPT": 6,
+        "MUST_REJECT": 6
+      },
+      "harmfulRejected": 10,
+      "harmfulTotal": 10,
+      "harmlessAccepted": 10,
+      "harmlessTotal": 10,
+      "matrixMatches": 18,
+      "params": {
+        "allow_unavailable": "True | False | True | True | True | True",
+        "evidence_ids": [
+          "e1",
+          "e2",
+          "e3"
+        ]
+      },
+      "patternId": "P6"
+    }
+  ]
+}

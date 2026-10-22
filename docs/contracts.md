@@ -133,13 +133,27 @@ Verified while building VerdictJudge (installed SDK + direct mode):
 | Page bound | Only the first 3000 characters of the decoded body are extracted or hashed; every claim about a page is therefore bounded and reproducible. |
 | URL freeze | The contract uses a small local URL freeze (scheme/host lowercase, fragment stripped, credentials rejected) instead of `normalize_url`, because `urllib.parse` is not yet verified in GenVM. |
 
+### 3.3 M8/M9 implementation findings
+
+| Finding | Detail |
+|---|---|
+| `tx_execution_succeeded` is leader-only | `gltest.assertions.tx_execution_succeeded` inspects only `leader_receipt[0].execution_result`. The leader's own VM can succeed while **every validator votes `disagree`**, so this helper alone cannot prove consensus accepted a result. Use the validator votes and whether the state write persisted — see `tests/helpers.py`. |
+| Rejection signals | Accepted: status `5` (`ACCEPTED`), votes `agree`/`idle`. Rejected: status `6` (`UNDETERMINED`), votes `disagree`/`idle`, and the leader's state write is rolled back. |
+| StudioNet explorer | `https://explorer-studio.genlayer.com` with `/address/<addr>` and `/tx/<hash>` paths. The older `genlayer-explorer.vercel.app` host currently answers `DEPLOYMENT_PAUSED`. |
+| CLI `--args` cannot pass a JSON string | `genlayer call/write --args` runs `JSON.parse` on every value. When the value parses as an array or object it is encoded as a contract **array/dict**, never as a `str`. A JSON-string parameter that looks like an array (this kit's rubric and fact rules) therefore cannot be passed through the CLI at all. The genlayer-test client encodes a Python `str` correctly, which is why the integration and deployment tests use it. |
+| CLI deploy output shape | The deploy command ends with `Result: { 'Transaction Hash': '0x…', 'Contract Address': '0x…' }` — labels and values are single-quoted. The write command instead prints `Write Transaction Hash:` with the hash on the *next* line. Parse by label, not by order. |
+| `genlayer schema` | Works against a deployed address and is used to save the schema in `deployments/studionet.md`. |
+| gltest config access | `from gltest_cli.config.general import get_general_config` exposes `get_rpc_url()` and `get_network_name()`. |
+| gltest deploy receipt | `factory.deploy_contract_tx(args=[])` returns the receipt; the address is `receipt["data"]["contract_address"]`. |
+
 ## 4. Standard library availability
 
 The pinned CPython runner archive was inspected directly. `json` and `re` are present under
 `py/std`; `unicodedata` is compiled into `cpython.wasm` (module symbols and its
-`normalize()` error string are present). The first StudioNet contract that uses
-`unicodedata` will be the runtime probe; until that passes, this is recorded as a
-pending check rather than assumed.
+`normalize()` error string are present). **Verified at runtime on StudioNet**: the deployed
+VerdictJudge and WebFactAttestor both call `normalize_text` (which uses
+`unicodedata.normalize("NFKC", …)`) inside live consensus rounds, and the deployments
+recorded in `deployments/studionet.md` succeeded.
 
 Forbidden imports (`random`, `os`, `time`, `sys`, `subprocess`) are avoided by the vendored
 code. Randomness appears only in test-side perturbation generators, never in comparators.
@@ -251,3 +265,42 @@ $ python3.12 -m pytest tests/primitives tests/matrices tests/direct -q
 
 Both contracts freeze their configuration at creation and store references plus short
 digests, not raw pages.
+
+## 6. Live deployments (StudioNet)
+
+Deployed 2026-10-22 by `tests/deploy/test_studionet_deployment.py`; the full record,
+including saved schemas and every transaction hash, is in
+[`deployments/studionet.md`](../deployments/studionet.md).
+
+| Contract | Address | Explorer |
+|---|---|---|
+| VerdictJudge | `0x34c97Ca059b36C967A11C4c4DE9bEE096e017A4a` | [address](https://explorer-studio.genlayer.com/address/0x34c97Ca059b36C967A11C4c4DE9bEE096e017A4a) |
+| WebFactAttestor | `0xAeA5d7626807B1821837313cED685d97F73eA80D` | [address](https://explorer-studio.genlayer.com/address/0xAeA5d7626807B1821837313cED685d97F73eA80D) |
+
+StudioNet is gasless, so both deploys cost **0 GEN**.
+
+What the deployment exercised, under real consensus with real validators:
+
+| Step | VerdictJudge | WebFactAttestor |
+|---|---|---|
+| Deploy | 5/5 `agree` | 5/5 `agree` |
+| First read | `get_config` | `get_config` |
+| First write | `create_judgment` (freezes verdict set + rubric) | `create_spec` (freezes URL + 3 fact rules) |
+| Second write | `submit_evidence` | — |
+| Consensus write | `evaluate` — real LLM round, verdict `ELIGIBLE`, band `HIGH`, digest stored and not compared | `request_attestation` — live fetch of `example.com`, `source_status: OK`, facts `has_heading: false`, `mentions_documentation: true`, `word_bucket: 1`, digest `d7ee97cd` |
+| Read back | `get_judgment`, `get_assessments` | `get_spec`, `get_latest_attestation`, `get_attestations` |
+
+A VerdictJudge evaluation on StudioNet produced:
+
+```json
+{"band": "HIGH", "cited_evidence_ids": ["ev0-0"], "cited_item_ids": ["hard_income", "quality"],
+ "digest": "The evidence explicitly states a verified income of 5000 per year, satisfying all rubric requirements.",
+ "round": 1, "verdict": "ELIGIBLE"}
+```
+
+Note the digest: it is stored for humans and excluded from the comparison, exactly as the
+P1 pattern specifies.
+
+Testnet (Bradbury / Asimov) deployment is **not** done: it needs a funded account, and
+claiming testnet GEN at the faucet is a browser step that cannot be automated.
+

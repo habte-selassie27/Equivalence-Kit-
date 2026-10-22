@@ -58,12 +58,33 @@ All notable changes to EquivalenceKit are recorded here. Format follows Keep a C
   `UNAVAILABLE` on a missing page.
 - `contracts/fixtures/consensus_probe.py`: test-only contract proving under real consensus
   that the P1 rule accepts honest one-step band noise and rejects a wrong verdict.
-- `tests/integration/helpers.py`: consensus assertions built on validator votes.
+- `tests/helpers.py`: consensus assertions built on validator votes.
 
 ### Fixed — M7/M8
 - `WebFactAttestor` used `response.status_code` from prose documentation; the pinned SDK
   defines `Response(status, headers, body)`. The contract recorded `UNAVAILABLE` for every
   fetch until direct tests caught it. Recorded in `docs/contracts.md`.
+- `gltest.assertions.tx_execution_succeeded` inspects only the *leader* receipt, so it
+  returned `True` for a transaction where every validator voted `disagree`. All integration
+  and deployment tests now assert on validator votes and on whether the state write
+  persisted.
+- `tests/conftest.py` skips the live-network test directories unless `--network` names a
+  live network, so a plain `pytest tests/` run stays green.
+
+### Added — M9 StudioNet deployment
+- `tests/deploy/test_studionet_deployment.py`: deploys both reference contracts, exercises
+  each with real reads and real consensus writes, saves `genlayer schema` output, and writes
+  `deployments/studionet.md`.
+- `deployments/studionet.md`: VerdictJudge `0x34c97Ca059b36C967A11C4c4DE9bEE096e017A4a`,
+  WebFactAttestor `0xAeA5d7626807B1821837313cED685d97F73eA80D`. StudioNet is gasless: 0 GEN.
+- `tools/export_site_data.py`: generates the playground's data from the repo (pattern specs,
+  matrices, canonical examples, tightness report) with a `--check` staleness gate.
+
+### Fixed — M9
+- The `genlayer` CLI cannot pass a JSON-string parameter that looks like an array: its
+  `--args` parser runs `JSON.parse` and encodes the result as a contract array instead of a
+  string. Recorded in `docs/contracts.md`; the deployment uses the genlayer-test client,
+  which encodes strings correctly.
 
 ### Added — M11 documentation
 - `docs/pattern-catalog.md`, `docs/decision-guide.md`, `docs/tightness-testing.md`,
@@ -80,8 +101,8 @@ All notable changes to EquivalenceKit are recorded here. Format follows Keep a C
 | M5 | Pattern specs, matrices, perturbation | done |
 | M6 | VerdictJudge + vendoring + direct tests | done |
 | M7 | WebFactAttestor + direct tests | done |
-| M8 | Integration tests under real consensus | in progress |
-| M9 | StudioNet deployment with saved schemas | not started |
+| M8 | Integration tests under real consensus | done |
+| M9 | StudioNet deployment with saved schemas | done |
 | M10 | Testnet deployment (requires funded account) | blocked on user |
 | M11 | Documentation | done |
 | M12 | RankingJudge stretch | not started |

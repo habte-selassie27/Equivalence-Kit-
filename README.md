@@ -101,6 +101,25 @@ empty fact set — a failed fetch is never recorded as a negative finding.
 A test-only contract with fixed leader/validator outputs, used to prove under real StudioNet
 consensus that the P1 rule accepts honest one-step band noise and rejects a wrong verdict.
 
+## Live deployments (StudioNet)
+
+Both reference contracts are deployed on StudioNet, which is gasless (0 GEN). The full
+record — every transaction hash, the saved schemas, and the validator votes for each step —
+is in [`deployments/studionet.md`](deployments/studionet.md).
+
+| Contract | Address | Explorer |
+|---|---|---|
+| VerdictJudge | `0x34c97Ca059b36C967A11C4c4DE9bEE096e017A4a` | [view](https://explorer-studio.genlayer.com/address/0x34c97Ca059b36C967A11C4c4DE9bEE096e017A4a) |
+| WebFactAttestor | `0xAeA5d7626807B1821837313cED685d97F73eA80D` | [view](https://explorer-studio.genlayer.com/address/0xAeA5d7626807B1821837313cED685d97F73eA80D) |
+
+The deployed contracts were exercised end to end: a VerdictJudge evaluation reached
+agreement on a real LLM round (verdict `ELIGIBLE`, band `HIGH`, digest stored but not
+compared), and a WebFactAttestor attestation fetched the live `example.com` page under P2
+consensus.
+
+Testnet (Bradbury / Asimov) deployment is **not** done — it needs a funded account, and
+claiming testnet GEN at the faucet is a browser step that cannot be automated.
+
 ## Documentation
 
 | File | What it covers |
