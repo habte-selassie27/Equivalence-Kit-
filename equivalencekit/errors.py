@@ -38,6 +38,7 @@ REGISTRY = {
         {
             "BAD_JSON",
             "MISSING_KEY",
+            "UNKNOWN_KEY",
             "WRONG_TYPE",
             "UNKNOWN_ENUM",
             "UNKNOWN_ID",
