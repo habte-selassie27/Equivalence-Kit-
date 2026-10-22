@@ -20,7 +20,8 @@ right.
   invariants, tolerance rationale, failure behavior, known limits.
 - **A tightness-testing method** — acceptance matrices plus perturbation generators that
   measure whether a rule is too loose or too strict, with a report you can read.
-- **Two reference contracts** with real state machines, not demos.
+- **Three reference contracts** with real state machines, not demos: VerdictJudge (P1),
+  WebFactAttestor (P2), RankingJudge (P4).
 
 ## What it is not
 
@@ -33,6 +34,13 @@ right.
 
 Builders writing GenLayer contracts that call an LLM or fetch the live web — anyone who has
 ever written a validator that compares raw model output and hoped for the best.
+
+## Install
+
+```bash
+pip install -e .          # editable install exposes the `ekit` CLI
+ekit audit contracts/     # lint a contract against the anti-pattern gallery
+```
 
 ## Quick start
 
@@ -71,6 +79,7 @@ all four contracts lint clean; tightness 60/60 on both bars.
 | Perturbation | `equivalencekit/perturb.py` | Harmless and harmful mutation generators for tightness testing |
 | Tightness report | `tools/tightness.py` | Prints per-pattern acceptance/rejection rates |
 | Vendoring | `tools/vendor.py` | Inlines primitives into a single-file contract |
+| Audit linter | `equivalencekit/audit.py`, `ekit audit` | Static checks for the anti-pattern gallery (A1, A3, A6, A13, A14, A15, A18, A19, A23), JSON output for CI |
 
 ## Reference contracts
 

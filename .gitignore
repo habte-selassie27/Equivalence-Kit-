@@ -9,3 +9,4 @@ playground/node_modules/
 playground/dist/
 .coverage
 htmlcov/
+*.egg-info/

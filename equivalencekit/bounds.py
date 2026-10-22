@@ -1,3 +1,4 @@
+# ekit: ignore-file A19
 """Central bounds used by every primitive and contract.
 
 Nothing in the kit may loop or recurse without a documented limit. Over-limit input is a

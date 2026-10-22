@@ -1,3 +1,4 @@
+# ekit: ignore-file A3, A13
 import pytest
 
 from equivalencekit.errors import KitError

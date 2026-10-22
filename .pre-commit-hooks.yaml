@@ -1,0 +1,9 @@
+- repo: local
+  hooks:
+    - id: ekit-audit
+      name: ekit audit
+      entry: ekit audit
+      language: python
+      types: [python]
+      pass_filenames: false
+      args: [contracts/]

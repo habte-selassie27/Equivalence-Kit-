@@ -93,7 +93,27 @@ $ python3.12 -m pytest tests/integration tests/deploy -v -s --network studionet
    semantics. Documented in `docs/tightness-testing.md` section 5. The final suite passes
    all six tests unassisted after the P4 digest fix.
 
+## Pass 15 — developer tooling (ekit CLI)
+
+Added the distribution and adoption surface the kit was missing:
+
+- `LICENSE` (MIT), `pyproject.toml` (PEP 621, console script `ekit`), `CONTRIBUTING.md`,
+  `.pre-commit-hooks.yaml`, `.github/workflows/audit.yml`.
+- `equivalencekit/audit.py` + `equivalencekit/cli.py`: `ekit audit <path> [--json]` runs
+  deterministic AST checks mapped to the anti-pattern gallery (A1, A3, A6, A13, A14, A15,
+  A18, A19, A23), with ignore directives (`# ekit: ignore` / `# ekit: ignore-file`) and
+  vendored-block awareness. `ekit --version`.
+- `tests/primitives/test_audit.py` (8 tests). Own code audited clean.
+- README: install + audit quick start, three-contract wording, audit linter row.
+- `equivalencekit/bounds.py`, `perturb.py`, and two test files carry ignore directives
+  where a finding is a documented false positive.
+
+Verification: 265 local tests pass; vendor fresh; tightness 60/60; site data up to date;
+`ekit audit contracts/ equivalencekit/ tests/` clean; `pip install -e .` works and
+`ekit` resolves on PATH.
+
 ## Next step
 
-Commit pass 14. Then M10 (Bradbury/Asimov) remains the only milestone: it needs a funded
-account, and the faucet is a browser step.
+Pass 16: `ekit scaffold` (pattern → vendored contract + matrix test) and `ekit matrix`
+(acceptance matrix + perturbation runner on a custom spec). Then the Pattern Builder
+screen in the playground. M10 testnet deploy remains blocked on a funded account.

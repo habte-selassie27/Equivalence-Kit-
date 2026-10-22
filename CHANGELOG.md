@@ -253,3 +253,13 @@ running. See `tests/helpers.py::deploy_contract`.
 | M10 | Testnet deployment (requires funded account) | blocked on user |
 | M11 | Documentation | done |
 | M12 | RankingJudge stretch | done |
+
+## 2026-10-23 — pass 15 (developer tooling)
+
+- Added MIT `LICENSE`, `pyproject.toml` (PEP 621, `ekit` console script), `CONTRIBUTING.md`,
+  `.pre-commit-hooks.yaml`, `.github/workflows/audit.yml`.
+- Added `equivalencekit/audit.py` + `equivalencekit/cli.py`: `ekit audit <path> [--json]`
+  runs deterministic AST checks mapped to anti-patterns A1, A3, A6, A13, A14, A15, A18, A19,
+  A23, with ignore directives and vendored-block awareness. `ekit --version`.
+- Added `tests/primitives/test_audit.py` (8 tests). Own code audits clean.
+- README: install + audit quick start, three-contract wording, audit linter row.

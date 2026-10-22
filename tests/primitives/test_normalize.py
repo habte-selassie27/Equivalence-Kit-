@@ -83,7 +83,7 @@ def test_normalize_int_formats_and_ranges():
     assert normalize_int("+3") == 3
     assert normalize_int("-0") == 0
     with pytest.raises(KitError, match="WRONG_TYPE"):
-        normalize_int(3.0)
+        normalize_int(3.0)  # ekit: ignore A13
     with pytest.raises(KitError, match="WRONG_TYPE"):
         normalize_int("3.5")
     with pytest.raises(KitError, match="WRONG_TYPE"):
