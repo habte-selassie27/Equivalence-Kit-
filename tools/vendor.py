@@ -108,7 +108,7 @@ def main() -> int:
     check = "--check" in sys.argv
     block = render_block()
     stale = []
-    for path in sorted(CONTRACTS.glob("*.py")):
+    for path in sorted(CONTRACTS.rglob("*.py")):
         text = path.read_text()
         if BEGIN not in text or END not in text:
             continue
