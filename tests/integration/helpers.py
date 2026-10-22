@@ -12,7 +12,7 @@ Observed on StudioNet (2026-10-22):
   the leader's state write is rolled back.
 """
 
-from genlayer_py.types.transactions import TransactionStatus
+from genlayer_py.types.transactions import TRANSACTION_STATUS_NUMBER_TO_NAME
 
 STATUS_ACCEPTED = 5
 STATUS_UNDETERMINED = 6
@@ -59,10 +59,16 @@ def assert_undetermined(receipt) -> None:
 
 
 def status_name(receipt) -> str:
-    """Human-readable transaction status for evidence output."""
+    """Human-readable transaction status for evidence output.
+
+    `TransactionStatus` is a string-valued enum (`"ACCEPTED"`), so it cannot be constructed
+    from the numeric status. The numeric mapping is keyed by the status as a string.
+    """
 
     number = receipt.get("status")
+    if isinstance(number, int):
+        number = str(number)
     try:
-        return TransactionStatus(int(number)).value
-    except (TypeError, ValueError):
+        return TRANSACTION_STATUS_NUMBER_TO_NAME[number].value
+    except (KeyError, TypeError, AttributeError):
         return str(number)
