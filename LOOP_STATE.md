@@ -2,45 +2,36 @@
 
 ## Current state
 
-- Pass: 4
-- Current milestone: M5 — pattern specs P1-P6, acceptance matrices, perturbation generators
-- Last completed milestone: M4 — parsing with hostile-input tests
+- Pass: 5
+- Current milestone: M6 — VerdictJudge contract (lint clean, direct tests green)
+- Last completed milestone: M5 — patterns P1-P6, acceptance matrices, perturbation generators
 - Stall counter: 0
-- Last scores: M1 done; M2 primitives 28 passed; M3 primitives 42 passed; M4 primitives 55 passed
+- Last scores: 111 matrix+primitive tests passed; tightness 60/60 harmless accepted, 60/60 harmful rejected
 
 ## Tooling
 
-All required tools present and verified: git, Python 3.10/3.12, pytest 9.1.1, genvm-lint
-0.11.0, genlayer-test 0.1.2, genlayer CLI 0.39.2, docs access, Docker, StudioNet.
-Direct mode and StudioNet deploy/write/read were proved with a probe contract.
+git, Python 3.10/3.12, pytest 9.1.1, genvm-lint 0.11.0, genlayer-test 0.1.2, genlayer CLI
+0.39.2, docs access, Docker, StudioNet all verified. Direct mode and StudioNet
+deploy/write/read proved on a probe contract.
 
-## Verified-API ledger
+## Verified-API ledger (new findings this pass)
 
 | Item | Source | Status |
 |---|---|---|
-| Pinned header, `gl.Contract`, public decorators, `__init__` required | docs first-contract + StudioNet probe | VERIFIED |
-| `DynArray`, `TreeMap`, `@allow_storage`, sized ints | docs storage | VERIFIED |
-| No manual `DynArray()`/`TreeMap()` construction; zero-init fields | direct-mode probe | VERIFIED |
-| `gl.vm.run_nondet_unsafe`, `gl.vm.Return.calldata`, bool validator | docs non-determinism | VERIFIED |
-| `gl.nondet.exec_prompt(..., response_format="json")` | docs calling-llms | VERIFIED |
-| `gl.nondet.web.get/request`, `.body`, `.status_code` | docs web-access | VERIFIED |
-| `gl.vm.UserError`, `gl.storage.copy_to_memory`, sender address | docs | VERIFIED |
-| `json`, `re` in runner; `unicodedata` compiled into cpython.wasm | runner archive | VERIFIED (runtime probe pending) |
-| StudioNet integration via `gltest --network studionet` | probe | VERIFIED |
-
-## Import strategy
-
-Single-file deployment; no documented sibling imports. Contracts vendor the primitives via
-`tools/vendor.py`; generated files are marked and equivalence-tested. Decision recorded in
-docs/contracts.md.
+| `run_nondet_unsafe(leader_fn, validator_fn)` wraps leader as `lambda _: leader_fn()`, so leader takes no args | SDK `genlayer/gl/vm.py` in pinned runner | VERIFIED |
+| Returns `Lazy[T]`; consensus failure terminates the VM (no `None` sentinel) | SDK `genlayer/gl/vm.py` | VERIFIED |
+| Validator receives `gl.vm.Result`; `gl.vm.Return.calldata`, `VMError`, `UserError` | SDK `genlayer/gl/vm.py` | VERIFIED |
+| Direct mode runs the leader only and captures the validator; `direct_vm.run_validator(...)` replays it | gltest `direct/wasi_mock.py`, `direct/vm.py` | VERIFIED |
+| `direct_vm.mock_llm(pattern, response)` and `mock_web(pattern, response)` | installed plugin | VERIFIED |
+| Earlier ledger (header, storage, `__init__` required, web, StudioNet) | docs + probes | VERIFIED |
 
 ## Open gaps
 
-1. Runtime probe for `unicodedata` in GenVM (first contract using it on StudioNet).
-2. Verify `gl.vm.UserError` exact behavior (M6/M7 direct + integration).
-3. Nested `@allow_storage` / `TreeMap` in storage classes (M6).
-4. P1-P6 specs, matrices and perturbation generators not started.
+1. Runtime probe for `unicodedata` in GenVM (first contract that uses it on StudioNet; M6/M7).
+2. `gl.vm.UserError` exact behavior under direct + integration tests (M6).
+3. Nested storage dataclasses / `DynArray` inside `@allow_storage` (M6).
+4. vendor.py and equivalence test not written yet.
 
 ## Next step
 
-M5: write `equivalencekit/patterns.py`, `perturb.py`, JSON matrix fixtures, and matrix tests.
+M6: `tools/vendor.py`, `contracts/verdict_judge.py`, direct tests, lint.

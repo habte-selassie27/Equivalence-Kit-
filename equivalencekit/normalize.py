@@ -223,6 +223,23 @@ def normalize_ranked_id_list(values, max_items: int = MAX_IDS, max_len: int = MA
     return tuple(result)
 
 
+def normalize_entity_list(values, max_items: int = MAX_IDS, max_len: int = MAX_TEXT) -> tuple:
+    """Canonical free-text entity tuple: normalized, deduped, sorted, bounded."""
+
+    if isinstance(values, (str, bytes)) or not isinstance(values, (list, tuple)):
+        raise KitError("LLM_ERROR", "WRONG_TYPE")
+    if len(values) > max_items:
+        raise KitError("EXPECTED", "OVER_LIMIT")
+    seen = set()
+    for item in values:
+        if not isinstance(item, str):
+            raise KitError("LLM_ERROR", "WRONG_TYPE")
+        key = normalize_text(item, max_len=max_len)
+        if key:
+            seen.add(key)
+    return tuple(sorted(seen))
+
+
 def normalize_url(value: str) -> str:
     """Canonical URL key: lower scheme/host, no fragment, no credentials, no tracking."""
 
