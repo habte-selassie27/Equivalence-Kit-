@@ -107,6 +107,20 @@ Rules applied:
 - A source failure is a first-class `UNAVAILABLE` value where the pattern allows it.
 - No storage writes, contract calls, or message emission inside the nondet block.
 
+### 3.1 M6 implementation findings
+
+Verified while building VerdictJudge (installed SDK + direct mode):
+
+| Finding | Detail |
+|---|---|
+| Leader signature | `run_nondet_unsafe` serializes `lambda _: leader_fn()`, so `leader_fn` takes no arguments. The direct-mode mock invokes that wrapper with `None`. |
+| Return type | `run_nondet_unsafe` is wrapped by `_lazy_api`; a normal call returns the decoded leader value, not a `Lazy`. |
+| Validator replay | Direct mode runs the leader only, then `direct_vm.run_validator(leader_result=..., leader_error=...)` replays the captured validator. |
+| Storage-class construction | `DynArray()` and `DynArray[T]()` both raise `TypeError: this class can't be instantiated by user`. Construct records with plain lists for `DynArray` fields; the storage descriptor converts them. Verified by probe and by VerdictJudge tests. |
+| Nested records | `@allow_storage` records containing `DynArray` of another `@allow_storage` record work, including `gl.storage.copy_to_memory` and append. |
+| `gl.vm.UserError` | `raise gl.vm.UserError("PREFIX: CODE")` propagates to direct-mode `expect_revert` unchanged. Catching `KitError` then raising the classified string works. |
+| `unicodedata` | Vendor block imports it; genvm-lint passes. StudioNet runtime probe still pending (M9). |
+
 ## 4. Standard library availability
 
 The pinned CPython runner archive was inspected directly. `json` and `re` are present under
@@ -128,10 +142,52 @@ evidence references, and the contract produces an append-only P1 assessment hist
 State machine: `OPEN -> EVALUATED -> CHALLENGED -> EVALUATED (round + 1) -> ... -> CLOSED`.
 Every other transition raises `EXPECTED: INVALID_STATE`. Assessments are append-only.
 
+Methods (source: `contracts/verdict_judge.py`; generated vendored block is not hand-edited):
+
+| Method | Kind | Access | Behavior |
+|---|---|---|---|
+| `create_judgment(title, verdicts_csv, rubric_json)` | write | anyone | Freezes 2-8 verdicts, 1-32 rubric items, and deterministic forbidden-verdict rules; returns the id |
+| `submit_evidence(judgment_id, ref)` | write | creator always; others while OPEN | Appends `ev<id>-<n>`; max 64 refs, each <= 512 bytes |
+| `evaluate(judgment_id)` | write | anyone | Runs code checks first; appends round 1 assessment |
+| `challenge(judgment_id, reason)` | write | creator or an evidence submitter | EVALUATED -> CHALLENGED; reason <= 280 bytes |
+| `re_evaluate(judgment_id)` | write | anyone | CHALLENGED -> EVALUATED; appends the next round |
+| `close(judgment_id)` | write | creator | EVALUATED -> CLOSED |
+| `get_judgment`, `get_assessments`, `get_evidence`, `get_config` | view | anyone | JSON strings; histories are never overwritten |
+
+Limits: 8 verdicts, 32 rubric items, 64 evidence refs, 8 rounds, 16 KiB rubric JSON,
+280-byte item text, 160-byte rule values, 160-byte title, 512-byte reference, 280-byte
+reason. Over-limit input raises `EXPECTED: OVER_LIMIT`; malformed input raises
+`EXPECTED: INVALID_ARGUMENT`; unknown records raise `EXPECTED: NOT_FOUND`.
+
+Deterministic rules (decided in code before any model call):
+
+- `ALWAYS_TRUE`
+- `EVIDENCE_CONTAINS` (normalized containment against any evidence reference)
+- `EVIDENCE_COUNT_AT_LEAST`
+
+A failed item forbids the verdicts listed in its frozen `forbidden` set. If those rules leave
+exactly one allowed verdict, the contract writes the assessment without calling the model.
+Otherwise it calls the LLM and validators re-run the same deterministic checks.
+
 Consensus: deterministic rubric checks run first in code; forbidden verdicts are enforced;
 the LLM proposes `{verdict, band, cited_item_ids, cited_evidence_ids, digest}`; validators
 independently re-run and compare with P1 (verdict exact, band within one step, cited ids
-subsets, invariant consistency). Digest is stored and never compared.
+subsets, invariant consistency for both outputs). Digest is stored and never compared.
+The deterministic post-consensus parse fails closed with `LLM_ERROR: <CODE>` and leaves
+state unchanged.
+
+M6 evidence:
+
+```text
+$ genvm-lint check contracts/verdict_judge.py --json
+{"ok":true,"lint":{"ok":true,"passed":3},"validate":{"ok":true,"contract":"VerdictJudge","methods":10,"view_methods":4,"write_methods":6,"ctor_params":0,...}}
+
+$ python3.12 -m pytest tests/direct/test_verdict_judge.py -q
+13 passed
+
+$ python3.12 -m pytest tests/matrices/test_vendored.py -q
+31 passed
+```
 
 ### WebFactAttestor
 
