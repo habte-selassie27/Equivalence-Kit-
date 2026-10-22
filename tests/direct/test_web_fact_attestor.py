@@ -17,7 +17,9 @@ RULES = [
 GOOD_FACTS = {
     "has_pricing": True,
     "mentions_refund": True,
-    "word_bucket": 1,
+    # The bucket fact holds the raw word count; the comparator buckets it when comparing,
+    # so two fetches that differ by a few words still agree.
+    "word_bucket": 11,
     "plan": "PRO",
 }
 
@@ -84,8 +86,8 @@ def test_attestation_extracts_facts_and_history_is_readable(direct_vm, direct_de
     assert latest["facts"] == GOOD_FACTS
     assert latest["round"] == 1
     assert latest["status"] == "ACTIVE"
-    assert len(latest["snapshot_digest"]) == 8
-    assert all(character in "0123456789abcdef" for character in latest["snapshot_digest"])
+    assert len(latest["leader_snapshot_digest"]) == 8
+    assert all(character in "0123456789abcdef" for character in latest["leader_snapshot_digest"])
 
     history = json.loads(attestor.get_attestations(0))
     assert len(history) == 1
@@ -101,7 +103,7 @@ def test_unreachable_source_is_unavailable_never_a_negative_fact(direct_vm, dire
     latest = _latest(attestor)
     assert latest["source_status"] == "UNAVAILABLE"
     assert latest["facts"] == {}
-    assert latest["snapshot_digest"] == ""
+    assert latest["leader_snapshot_digest"] == ""
     assert latest["status"] == "ACTIVE"
 
 
@@ -127,23 +129,50 @@ def test_validator_accepts_adjacent_bucket_and_rejects_bad_decisions(direct_vm, 
     _mock_enum(direct_vm)
     attestor.request_attestation(0)
 
+    # A count one bucket over is still adjacent: the page reads 11 words (bucket 1 with
+    # edges [5, 20]); 3 words is bucket 0, so the two are adjacent.
     adjacent = dict(GOOD_FACTS)
-    adjacent["word_bucket"] = 0
-    leader = {"source_status": "OK", "facts": adjacent, "snapshot_digest": "deadbeef"}
+    adjacent["word_bucket"] = 3
+    leader = {"source_status": "OK", "facts": adjacent, "leader_snapshot_digest": "deadbeef"}
     assert direct_vm.run_validator(leader_result=leader) is True
 
     flipped = dict(GOOD_FACTS)
     flipped["has_pricing"] = False
-    leader = {"source_status": "OK", "facts": flipped, "snapshot_digest": "deadbeef"}
+    leader = {"source_status": "OK", "facts": flipped, "leader_snapshot_digest": "deadbeef"}
     assert direct_vm.run_validator(leader_result=leader) is False
 
     extra = dict(GOOD_FACTS)
     extra["invented"] = True
-    leader = {"source_status": "OK", "facts": extra, "snapshot_digest": "deadbeef"}
+    leader = {"source_status": "OK", "facts": extra, "leader_snapshot_digest": "deadbeef"}
     assert direct_vm.run_validator(leader_result=leader) is False
 
-    unavailable = {"source_status": "UNAVAILABLE", "facts": {}, "snapshot_digest": ""}
+    unavailable = {"source_status": "UNAVAILABLE", "facts": {}, "leader_snapshot_digest": ""}
     assert direct_vm.run_validator(leader_result=unavailable) is False
+
+
+def test_bucket_adjacency_boundary(direct_vm, direct_deploy):
+    """Two buckets apart is not adjacent, even when both are valid measurements."""
+
+    rules = [
+        {"name": "count", "kind": "BUCKET_WORD_COUNT", "edges": [20, 40]},
+    ]
+    attestor = _deploy(direct_deploy, rules)
+    _mock_page(direct_vm)
+    _mock_enum(direct_vm)
+    attestor.request_attestation(0)
+
+    # The page reads 11 words, which is bucket 0 with edges [20, 40].
+    base = {"source_status": "OK", "facts": {"count": 11}, "leader_snapshot_digest": "deadbeef"}
+
+    # 30 words is bucket 1: one step away, accepted.
+    adjacent = dict(base)
+    adjacent["facts"] = {"count": 30}
+    assert direct_vm.run_validator(leader_result=adjacent) is True
+
+    # 45 words is bucket 2: two steps away, rejected.
+    far = dict(base)
+    far["facts"] = {"count": 45}
+    assert direct_vm.run_validator(leader_result=far) is False
 
 
 def test_validator_rejects_leader_error(direct_vm, direct_deploy):
@@ -180,7 +209,7 @@ def test_challenge_opens_the_next_round_and_permissions(direct_vm, direct_deploy
     assert history[1]["status"] == "ACTIVE"
 
     # Same page, same digest: the digest is stable even though it is not compared.
-    assert history[0]["snapshot_digest"] == history[1]["snapshot_digest"]
+    assert history[0]["leader_snapshot_digest"] == history[1]["leader_snapshot_digest"]
 
 
 def test_unavailable_allows_a_retry_without_a_challenge(direct_vm, direct_deploy):
@@ -305,3 +334,71 @@ def test_attestation_round_limit(direct_vm, direct_deploy):
     attestor.challenge_attestation(15, "too many")
     with direct_vm.expect_revert("EXPECTED: OVER_LIMIT"):
         attestor.request_attestation(0)
+
+
+def test_create_spec_requires_https_and_blocks_private_hosts(direct_vm, direct_deploy):
+    """A spec must not aim the validators at plain http or at their own network."""
+
+    attestor = direct_deploy("contracts/web_fact_attestor.py")
+    # Plain http is rejected on the scheme.
+    with direct_vm.expect_revert("EXPECTED: INVALID_ARGUMENT"):
+        attestor.create_spec("http://example.com/page", json.dumps(RULES))
+
+    for url in (
+        "https://169.254.169.254/latest/meta-data/",
+        "https://127.0.0.1/admin",
+        "https://10.0.0.1/internal",
+        "https://192.168.1.1/router",
+        "https://172.16.0.1/host",
+        "https://localhost:8500/",
+        "https://0.0.0.0/",
+        "https://127.1.2.3/",
+    ):
+        with direct_vm.expect_revert("EXPECTED: FORBIDDEN"):
+            attestor.create_spec(url, json.dumps(RULES))
+
+    # A public host over https is still accepted.
+    attestor.create_spec("https://example.com/page", json.dumps(RULES))
+
+
+def test_third_party_cannot_open_the_next_attestation_round(direct_vm, direct_deploy, direct_alice):
+    """A challenge opens the next round for the creator or the previous requester only."""
+
+    creator = direct_vm.sender
+    attestor = _deploy(direct_deploy)
+    _mock_page(direct_vm)
+    _mock_enum(direct_vm)
+    attestor.request_attestation(0)
+    attestor.challenge_attestation(0, "Re-fetch it.")
+
+    direct_vm.sender = direct_alice
+    with direct_vm.expect_revert("EXPECTED: NOT_AUTHORIZED"):
+        attestor.request_attestation(0)
+
+    # The creator can open the next round.
+    direct_vm.sender = creator
+    _roundtrip_mocks(direct_vm)
+    attestor.request_attestation(0)
+    assert len(json.loads(attestor.get_attestations(0))) == 2
+
+
+def test_page_truncation_is_applied_before_extraction(direct_vm, direct_deploy):
+    """A page of 3000 characters and one of 3001 must extract the same facts."""
+
+    body_3000 = "<h2>Pricing</h2>" + ("a" * (3000 - len("<h2>Pricing</h2>")))
+    body_3001 = body_3000 + "b"
+    assert len(body_3000) == 3000
+    assert len(body_3001) == 3001
+
+    attestor = _deploy(direct_deploy)
+    _roundtrip_mocks(direct_vm, body=body_3000)
+    attestor.request_attestation(0)
+    first = _latest(attestor)
+
+    attestor.challenge_attestation(0, "again")
+    _roundtrip_mocks(direct_vm, body=body_3001)
+    attestor.request_attestation(0)
+    second = _latest(attestor)
+
+    assert first["facts"] == second["facts"]
+    assert first["leader_snapshot_digest"] == second["leader_snapshot_digest"]

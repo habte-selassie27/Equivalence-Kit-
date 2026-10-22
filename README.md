@@ -54,15 +54,15 @@ genvm-lint check contracts/web_fact_attestor.py --json
 python3.12 -m pytest tests/integration -v -s --network studionet
 ```
 
-Current status: **230 tests passing** (primitives, matrices, direct, vendored equivalence);
-both contracts lint clean.
+Current status: **257 tests passing** (primitives, matrices, direct, vendored equivalence);
+all four contracts lint clean; tightness 60/60 on both bars.
 
 ## What is in the kit
 
 | Piece | Path | What it does |
 |---|---|---|
 | Normalizers | `equivalencekit/normalize.py` | Idempotent text/enum/bool/int/id/url normalization, heading extraction, volatile-field stripping |
-| Comparators | `equivalencekit/compare.py` | `enum_equal`, `ordinal_within`, `int_within_bps`, `bucket_adjacent`, `set_equal`, `subset_of`, `topk_overlap`, `facts_match`, `consistent_with`, `all_of` |
+| Comparators | `equivalencekit/compare.py` | `enum_equal`, `ordinal_within`, `int_within_bps`, `bucket_adjacent`, `set_equal`, `subset_of`, `topk_overlap`, `facts_match`, `validate_facts`, `normalize_facts`, `consistent_with`, `all_of` |
 | Defensive parsing | `equivalencekit/parsing.py` | `parse_with_spec` — schema-validated, fail-closed JSON from model output |
 | Error registry | `equivalencekit/errors.py` | Closed set of stable `PREFIX: REASON` strings, identical on every validator |
 | Bounds | `equivalencekit/bounds.py` | Every limit in one place; `OVER_LIMIT` rejects oversize input |
@@ -105,19 +105,20 @@ machine: `OPEN -> RANKED -> CHALLENGED -> RANKED (round + 1) -> ... -> CLOSED`.
 
 ## Live deployments (StudioNet)
 
-Both reference contracts are deployed on StudioNet, which is gasless (0 GEN). The full
+All three reference contracts are deployed on StudioNet, which is gasless (0 GEN). The full
 record — every transaction hash, the saved schemas, and the validator votes for each step —
 is in [`deployments/studionet.md`](deployments/studionet.md).
 
 | Contract | Address | Explorer |
 |---|---|---|
-| VerdictJudge | `0x34c97Ca059b36C967A11C4c4DE9bEE096e017A4a` | [view](https://explorer-studio.genlayer.com/address/0x34c97Ca059b36C967A11C4c4DE9bEE096e017A4a) |
-| WebFactAttestor | `0xAeA5d7626807B1821837313cED685d97F73eA80D` | [view](https://explorer-studio.genlayer.com/address/0xAeA5d7626807B1821837313cED685d97F73eA80D) |
+| VerdictJudge | `0x252068B9Cd0399cE5516fC8A2a04dE088FD45Ec7` | [view](https://explorer-studio.genlayer.com/address/0x252068B9Cd0399cE5516fC8A2a04dE088FD45Ec7) |
+| WebFactAttestor | `0xAAeBb09e01544e853C8ED91Ad824c0a496a6DC59` | [view](https://explorer-studio.genlayer.com/address/0xAAeBb09e01544e853C8ED91Ad824c0a496a6DC59) |
+| RankingJudge | `0x1D84b33Cab5e2a70fBFe43ACed9bF16DE63d45a0` | [view](https://explorer-studio.genlayer.com/address/0x1D84b33Cab5e2a70fBFe43ACed9bF16DE63d45a0) |
 
 The deployed contracts were exercised end to end: a VerdictJudge evaluation reached
-agreement on a real LLM round (verdict `ELIGIBLE`, band `HIGH`, digest stored but not
-compared), and a WebFactAttestor attestation fetched the live `example.com` page under P2
-consensus.
+agreement on a real LLM round, a WebFactAttestor attestation fetched the live `example.com`
+page under P2 consensus, and a RankingJudge round ranked a four-candidate universe under P4
+consensus with the submitted evidence in the prompt.
 
 Testnet (Bradbury / Asimov) deployment is **not** done — it needs a funded account, and
 claiming testnet GEN at the faucet is a browser step that cannot be automated.
@@ -180,19 +181,21 @@ tests/integration/  real consensus on StudioNet
 
 ## Live deployments (StudioNet)
 
-StudioNet is gasless (0 GEN). Both reference contracts are deployed there; the full
+StudioNet is gasless (0 GEN). All three reference contracts are deployed there; the full
 record — addresses, transaction hashes, saved schemas, and per-step validator votes — is in
 [`deployments/studionet.md`](deployments/studionet.md).
 
 | Contract | Address | Explorer |
 |---|---|---|
-| VerdictJudge | `0x34c97Ca059b36C967A11C4c4DE9bEE096e017A4a` | [view](https://explorer-studio.genlayer.com/address/0x34c97Ca059b36C967A11C4c4DE9bEE096e017A4a) |
-| WebFactAttestor | `0xAeA5d7626807B1821837313cED685d97F73eA80D` | [view](https://explorer-studio.genlayer.com/address/0xAeA5d7626807B1821837313cED685d97F73eA80D) |
+| VerdictJudge | `0x252068B9Cd0399cE5516fC8A2a04dE088FD45Ec7` | [view](https://explorer-studio.genlayer.com/address/0x252068B9Cd0399cE5516fC8A2a04dE088FD45Ec7) |
+| WebFactAttestor | `0xAAeBb09e01544e853C8ED91Ad824c0a496a6DC59` | [view](https://explorer-studio.genlayer.com/address/0xAAeBb09e01544e853C8ED91Ad824c0a496a6DC59) |
+| RankingJudge | `0x1D84b33Cab5e2a70fBFe43ACed9bF16DE63d45a0` | [view](https://explorer-studio.genlayer.com/address/0x1D84b33Cab5e2a70fBFe43ACed9bF16DE63d45a0) |
 
-A VerdictJudge evaluation reached agreement on a real LLM round: verdict `ELIGIBLE`, band
-`HIGH`, digest stored but never compared. A WebFactAttestor attestation fetched the live
-`example.com` page under P2 consensus: `has_heading: false`, `mentions_documentation: true`,
-`word_bucket: 1`, digest `d7ee97cd`.
+A VerdictJudge evaluation reached agreement on a real LLM round with the digest stored but
+never compared. A WebFactAttestor attestation fetched the live `example.com` page under P2
+consensus; the word-count fact holds the raw count and the bucket rule decides agreement. A
+RankingJudge round ranked four candidates under P4 consensus, with the submitted evidence
+rendered into the prompt.
 
 Testnet (Bradbury / Asimov) deployment is not done: it needs a funded account, and claiming
 testnet GEN at the faucet is a browser step.

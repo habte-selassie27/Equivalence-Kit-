@@ -510,6 +510,62 @@ def facts_match(leader, validator, rules) -> Comparison:
         else:
             raise ValueError(f'unknown fact rule kind: {kind!r}')
     return OK
+def normalize_facts(facts, rules) -> dict:
+    """Canonical form of a fact set: every value normalized by its own rule.
+
+    Raises ``KitError`` when a value is of the wrong type, out of range, or not in the
+    allowed set, and ``ValueError`` when the *rule* itself is malformed. The returned
+    dict has the same keys as the input, so a stored fact set always has a stable type:
+    a boolean is ``True``/``False``, an enum is the canonical label, a bucket is an int.
+    """
+    if not isinstance(facts, dict) or not isinstance(rules, dict):
+        raise KitError('LLM_ERROR', 'WRONG_TYPE')
+    required = set(rules)
+    if set(facts) - required:
+        raise KitError('LLM_ERROR', 'UNKNOWN_KEY')
+    if required - set(facts):
+        raise KitError('LLM_ERROR', 'MISSING_KEY')
+    canonical = {}
+    for name in sorted(required):
+        rule = rules[name]
+        value = facts[name]
+        kind = rule.get('kind')
+        if kind == 'bool':
+            canonical[name] = normalize_bool(value)
+        elif kind == 'enum':
+            canonical[name] = normalize_enum(value, rule['allowed'], rule.get('aliases'))
+        elif kind == 'bucket':
+            bucketize(value, tuple(rule['edges']))
+            canonical[name] = normalize_int(value)
+        elif kind == 'int_abs':
+            canonical[name] = normalize_int(value)
+        elif kind == 'int_bps':
+            canonical[name] = normalize_int(value)
+        elif kind == 'text':
+            canonical[name] = normalize_text(value)
+        else:
+            raise ValueError(f'unknown fact rule kind: {kind!r}')
+    return canonical
+def validate_facts(facts, rules) -> Comparison:
+    """Validate one fact set against its rules, without comparing it to another set.
+
+    This is a shape and range check, not an agreement check. It rejects a fact set that
+    is missing a required fact, carries an extra fact, or holds a value of the wrong
+    type or out of range. It never decides whether two validators agree — that is
+    ``facts_match``.
+
+    Used after consensus to confirm the agreed fact set is well formed before it is
+    written to storage.
+    """
+    try:
+        normalize_facts(facts, rules)
+    except KitError as error:
+        if error.reason == 'MISSING_KEY':
+            return _fail('FACT_MISSING')
+        if error.reason == 'UNKNOWN_KEY':
+            return _fail('FACT_EXTRA')
+        return _fail('FACT_MISMATCH')
+    return OK
 def consistent_with(verdict, checks, forbidden) -> Comparison:
     """Rule-table invariant: a failed check forbids listed verdicts.
 
@@ -894,7 +950,11 @@ class AttestationRecord:
     round: u32
     source_status: str
     facts_json: str
-    snapshot_digest: str
+    # The leader's own fingerprint of the bytes it read. It is NOT a fingerprint of what
+    # the validators read: each validator fetches independently and may see different
+    # bytes, and only the leader's value is kept. It is stored for audit and is never
+    # compared in consensus.
+    leader_snapshot_digest: str
     status: str
     challenge_reason: str
 
@@ -914,11 +974,62 @@ def _json_load(raw: str, max_bytes: int):
         _revert("EXPECTED", "INVALID_ARGUMENT")
 
 
-def _freeze_url(value: str) -> str:
-    """Bound the URL without urllib (not yet verified in GenVM).
+def _host_is_blocked(host: str) -> bool:
+    """Reject literal loopback, link-local, and private hosts.
 
-    Lowercase scheme/host, strip the fragment, reject credentials and whitespace. Tracking
-    parameters are intentionally not stripped here; the frozen URL is the attestation key.
+    No DNS resolution is available in GenVM, and resolving would itself be a
+    non-deterministic operation. This is therefore a literal check: it stops the
+    obvious loopback, cloud-metadata, and RFC1918 targets. A hostname that resolves to a
+    private address is not caught here — the validator's network policy is the backstop.
+    """
+
+    name = host.strip().lower()
+    if name.startswith("["):
+        # IPv6 literal, optionally with a port: [::1]:8080
+        closing = name.find("]")
+        if closing != -1:
+            name = name[1:closing]
+    elif name.count(":") == 1:
+        # host:port
+        name = name.split(":", 1)[0]
+    if name in ("localhost", "0.0.0.0", "::", "::1", "0:0:0:0:0:0:0:1"):
+        return True
+    if name.endswith(".localhost"):
+        return True
+    octets = name.split(".")
+    if len(octets) == 4:
+        try:
+            numbers = [int(part) for part in octets]
+        except ValueError:
+            return False
+        if any(number < 0 or number > 255 for number in numbers):
+            return False
+        first = numbers[0]
+        second = numbers[1]
+        if first == 0 or first == 127:
+            return True  # this-network and loopback
+        if first == 10:
+            return True  # RFC1918
+        if first == 172 and 16 <= second <= 31:
+            return True  # RFC1918
+        if first == 192 and second == 168:
+            return True  # RFC1918
+        if first == 169 and second == 254:
+            return True  # link-local, including cloud metadata
+        if first == 100 and 64 <= second <= 127:
+            return True  # carrier-grade NAT
+    return False
+
+
+def _freeze_url(value: str) -> str:
+    """Bound the URL to a public https origin.
+
+    HTTPS is required: on plain http an on-path attacker can serve the same bytes to
+    every validator, and the attestation would record a confidently false fact. The
+    host must not be a literal loopback, link-local, or private address, so a spec
+    creator cannot aim the validators at their own network. Lowercase scheme/host,
+    strip the fragment, reject credentials and whitespace. Tracking parameters are
+    intentionally not stripped here; the frozen URL is the attestation key.
     """
 
     if not isinstance(value, str) or not value.strip():
@@ -936,7 +1047,9 @@ def _freeze_url(value: str) -> str:
         _revert("EXPECTED", "INVALID_ARGUMENT")
     scheme = parts[0].lower()
     rest = parts[1]
-    if scheme not in ("http", "https") or not rest:
+    if scheme != "https":
+        _revert("EXPECTED", "INVALID_ARGUMENT")
+    if not rest:
         _revert("EXPECTED", "INVALID_ARGUMENT")
     cut = len(rest)
     for separator in ("/", "?"):
@@ -949,9 +1062,12 @@ def _freeze_url(value: str) -> str:
         _revert("EXPECTED", "INVALID_ARGUMENT")
     if "@" in authority:
         _revert("EXPECTED", "FORBIDDEN")
+    host = authority.lower()
+    if _host_is_blocked(host):
+        _revert("EXPECTED", "FORBIDDEN")
     if suffix == "" or suffix[0] == "?":
         suffix = "/" + suffix
-    return scheme + "://" + authority.lower() + suffix
+    return scheme + "://" + host + suffix
 
 
 def _build_rules(facts_json: str):
@@ -1048,7 +1164,9 @@ def _extract_deterministic(page: str, rule_views):
         elif rule["kind"] == KIND_PHRASE:
             facts[rule["name"]] = normalize_text(rule["param"]) in folded
         elif rule["kind"] == KIND_BUCKET:
-            facts[rule["name"]] = bucketize(len(visible.split()), rule["edges"])
+            # The fact holds the raw word count; the comparator buckets it when
+            # comparing, so two fetches that differ by a few words still agree.
+            facts[rule["name"]] = len(visible.split())
     return facts, visible
 
 
@@ -1083,14 +1201,14 @@ def _unpack_output(value):
         raise KitError("LLM_ERROR", "BAD_JSON")
     status = normalize_enum(value.get("source_status"), SOURCE_STATES)
     facts = value.get("facts")
-    digest = value.get("snapshot_digest", "")
+    digest = value.get("leader_snapshot_digest", "")
     if not isinstance(facts, dict) or not isinstance(digest, str):
         raise KitError("LLM_ERROR", "BAD_JSON")
     if status == SOURCE_UNAVAILABLE and facts:
         raise KitError("LLM_ERROR", "INCONSISTENT")
     if status == SOURCE_OK and len(digest) != 8:
         raise KitError("LLM_ERROR", "BAD_JSON")
-    return {"source_status": status, "facts": facts, "snapshot_digest": digest}
+    return {"source_status": status, "facts": facts, "leader_snapshot_digest": digest}
 
 
 def _spec_json(spec):
@@ -1120,7 +1238,7 @@ def _attestation_json(record):
         "round": int(record.round),
         "source_status": record.source_status,
         "facts": json.loads(record.facts_json),
-        "snapshot_digest": record.snapshot_digest,
+        "leader_snapshot_digest": record.leader_snapshot_digest,
         "status": record.status,
         "challenge_reason": record.challenge_reason,
     }
@@ -1155,8 +1273,13 @@ class WebFactAttestor(gl.Contract):
 
     @gl.public.write
     def request_attestation(self, spec_id: u32) -> u32:
-        """Fetch, extract, and append a P2 attestation. A new round needs a challenge or an
-        UNAVAILABLE result; otherwise the latest attestation is still the active record."""
+        """Fetch, extract, and append a P2 attestation.
+
+        The first round for a spec is open to anyone. Every later round needs either a
+        challenge or an UNAVAILABLE result, and only the spec creator or the previous
+        requester may open it. That keeps a third party from burning the round budget of
+        a spec and attributing the rounds to themselves.
+        """
         if spec_id not in self.specs:
             _revert("EXPECTED", "NOT_FOUND")
         spec = gl.storage.copy_to_memory(self.specs[spec_id])
@@ -1166,6 +1289,9 @@ class WebFactAttestor(gl.Contract):
             latest = self.attestations[spec.attestation_ids[len(spec.attestation_ids) - 1]]
             if latest.status != STATUS_CHALLENGED and latest.source_status != SOURCE_UNAVAILABLE:
                 _revert("EXPECTED", "INVALID_STATE")
+            sender = gl.message.sender_address.as_hex
+            if sender != spec.creator and sender != latest.requested_by:
+                _revert("EXPECTED", "NOT_AUTHORIZED")
 
         rule_views = []
         enum_views = []
@@ -1196,19 +1322,19 @@ class WebFactAttestor(gl.Contract):
             try:
                 response = gl.nondet.web.get(url)
                 if response.status != 200 or not response.body:
-                    return {"source_status": SOURCE_UNAVAILABLE, "facts": {}, "snapshot_digest": ""}
+                    return {"source_status": SOURCE_UNAVAILABLE, "facts": {}, "leader_snapshot_digest": ""}
                 text = response.body.decode("utf-8")
             except Exception:
-                return {"source_status": SOURCE_UNAVAILABLE, "facts": {}, "snapshot_digest": ""}
+                return {"source_status": SOURCE_UNAVAILABLE, "facts": {}, "leader_snapshot_digest": ""}
             page = text[:MAX_PAGE_CHARS]
             if not page.strip():
-                return {"source_status": SOURCE_UNAVAILABLE, "facts": {}, "snapshot_digest": ""}
+                return {"source_status": SOURCE_UNAVAILABLE, "facts": {}, "leader_snapshot_digest": ""}
             facts, visible = _extract_deterministic(page, rule_views)
             facts.update(_extract_enums(visible, enum_views))
             return {
                 "source_status": SOURCE_OK,
                 "facts": facts,
-                "snapshot_digest": digest_hex(page),
+                "leader_snapshot_digest": digest_hex(page),
             }
 
         def validator_fn(leaders_res) -> bool:
@@ -1234,13 +1360,21 @@ class WebFactAttestor(gl.Contract):
 
         if parsed["source_status"] == SOURCE_UNAVAILABLE:
             facts_json = "{}"
-            snapshot_digest = ""
+            leader_snapshot_digest = ""
         else:
-            validation = facts_match(parsed["facts"], parsed["facts"], rules_context)
-            if not validation.ok:
+            # Shape and range check on the agreed fact set, then store the canonical
+            # form so a stored boolean is True/False, a stored enum is the canonical
+            # label, and a stored bucket is an int — whatever the model returned.
+            # This is not an agreement check: consensus already happened inside
+            # run_nondet_unsafe.
+            try:
+                canonical_facts = normalize_facts(parsed["facts"], rules_context)
+            except KitError:
                 _revert("LLM_ERROR", "BAD_JSON")
-            facts_json = json.dumps(parsed["facts"], sort_keys=True)
-            snapshot_digest = parsed["snapshot_digest"]
+            except Exception:
+                _revert("LLM_ERROR", "BAD_JSON")
+            facts_json = json.dumps(canonical_facts, sort_keys=True)
+            leader_snapshot_digest = parsed["leader_snapshot_digest"]
 
         attestation_id = self.next_attestation_id
         record = AttestationRecord(
@@ -1250,7 +1384,7 @@ class WebFactAttestor(gl.Contract):
             round=u32(len(spec.attestation_ids) + 1),
             source_status=parsed["source_status"],
             facts_json=facts_json,
-            snapshot_digest=snapshot_digest,
+            leader_snapshot_digest=leader_snapshot_digest,
             status=STATUS_ACTIVE,
             challenge_reason="",
         )

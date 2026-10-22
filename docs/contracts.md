@@ -209,10 +209,10 @@ $ genvm-lint check contracts/verdict_judge.py --json
 {"ok":true,"lint":{"ok":true,"passed":3},"validate":{"ok":true,"contract":"VerdictJudge","methods":10,"view_methods":4,"write_methods":6,"ctor_params":0,...}}
 
 $ python3.12 -m pytest tests/direct/test_verdict_judge.py -q
-13 passed
+16 passed
 
 $ python3.12 -m pytest tests/matrices/test_vendored.py -q
-31 passed
+37 passed
 ```
 
 ### WebFactAttestor
@@ -238,8 +238,15 @@ Fact rule kinds:
 
 - `BOOL_PRESENT_HEADING`: normalized heading equality from markdown or simple HTML headings.
 - `BOOL_CONTAINS_PHRASE`: normalized containment in visible page text.
-- `BUCKET_WORD_COUNT`: visible word count into explicit ascending integer edges.
+- `BUCKET_WORD_COUNT`: the visible word count, compared under explicit ascending integer
+  edges. The fact holds the raw count; the comparator buckets both sides, so two fetches
+  that differ by a few words still agree and the stored fact stays informative.
 - `ENUM_FROM_LIST`: the only model-backed fact; the model picks from a frozen allowed list.
+
+Stored facts are canonical: a boolean is `True`/`False`, an enum is the canonical label, a
+bucket is the raw integer measurement. The model may return `"yes"` for a boolean or
+`"pro"` for an enum; what is written to storage is the normalized value, so a consumer
+never has to handle two shapes.
 
 A second `request_attestation` while the latest record is `ACTIVE` and `OK` raises
 `EXPECTED: INVALID_STATE`; a challenge or an `UNAVAILABLE` result opens the next round.
@@ -250,21 +257,75 @@ re-extract independently; every fact must match by its own rule and source statu
 exact. `UNAVAILABLE` is recorded as its own state with an empty fact set, never as a
 negative finding.
 
-M7 evidence:
+### URL policy and the digest (M14)
+
+The frozen URL is the attestation key, and it is the one input a spec creator controls
+completely. Two rules bound it:
+
+- **HTTPS only.** On plain http an on-path attacker can serve identical bytes to every
+  validator; they would agree, and the attestation would record a confidently false fact.
+  The `UNAVAILABLE` state machine protects against a source that is *down*, not against a
+  source that is *wrong*.
+- **No literal loopback, link-local, or private hosts.** A spec creator must not be able to
+  aim the validators at their own network — `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`,
+  `192.168.0.0/16`, `169.254.0.0/16` (which includes cloud instance metadata),
+  `100.64.0.0/10`, `0.0.0.0`, `::1`, and `localhost` are rejected. This is a literal
+  check, because GenVM has no DNS resolution and resolving would itself be a
+  non-deterministic operation. A public hostname that resolves to a private address is
+  not caught here; the validator's network policy is the backstop.
+
+**The digest is the leader's, and is labelled as such.** Each validator fetches
+independently and may see different bytes; only the leader's fingerprint is kept. The
+stored field is therefore named `leader_snapshot_digest`, and it is *not* a fingerprint of
+what the validators read. It is audit metadata, it is not compared in consensus, and it is
+FNV-1a — explicitly not collision resistant. (It was previously called `snapshot_digest`,
+which overstated what it proved.)
+
+**Rounds are attributable.** The first round for a spec is open to anyone. Every later
+round needs either a challenge or an `UNAVAILABLE` result, and only the spec creator or
+the previous requester may open it — otherwise a third party could burn a spec's
+16-round budget and have the rounds attributed to themselves.
+
+M7/M14 evidence:
 
 ```text
 $ genvm-lint check contracts/web_fact_attestor.py --json
-{"ok":true,"lint":{"ok":true,"passed":3},"validate":{"ok":true,"contract":"WebFactAttestor","methods":8,"view_methods":5,"write_methods":3,"ctor_params":0,...}}
+{"ok":true,"lint":{"ok":true,"passed":3},"validate":{"ok":true,"contract":"WebFactAttestor","methods":8,...}}
 
 $ python3.12 -m pytest tests/direct/test_web_fact_attestor.py -q
-13 passed
+17 passed
 
 $ python3.12 -m pytest tests/primitives tests/matrices tests/direct -q
-230 passed
+257 passed
 ```
 
 Both contracts freeze their configuration at creation and store references plus short
 digests, not raw pages.
+
+### VerdictJudge state-machine and storage notes (M14)
+
+- **One path per transition.** `evaluate` accepts an `OPEN` judgment only; `re_evaluate`
+  accepts a `CHALLENGED` one. Previously `evaluate` also accepted `CHALLENGED`, which made
+  `re_evaluate` a strict subset and let a challenge be "answered" without acknowledging
+  it.
+- **Uniform storage writes.** `submit_evidence` now uses `copy_to_memory` plus an explicit
+  write-back, like every other method in the file. It previously relied on the SDK's
+  write-through behaviour for a nested `DynArray`, which happened to persist but is an
+  implementation detail rather than a documented guarantee, and the file mixed both idioms.
+- **No allowed verdict is an error, not a model call.** If every verdict is forbidden by a
+  failed deterministic check there is no answer to ask a model for, so the contract now
+  raises `EXPECTED: INVALID_STATE` before spending a consensus round. Previously it asked
+  the model anyway and then failed the invariant check.
+- **Both sides of the invariant are checked.** `consistent_with` is applied to the leader's
+  and the validator's verdict inside the validator, and again to the agreed verdict after
+  consensus, so a forbidden verdict cannot survive even if every validator proposes it.
+
+M14 evidence:
+
+```text
+$ python3.12 -m pytest tests/direct/test_verdict_judge.py -q
+16 passed
+```
 
 ### RankingJudge
 
@@ -280,16 +341,16 @@ Methods (source: `contracts/ranking_judge.py`):
 | Method | Kind | Access | Behavior |
 |---|---|---|---|
 | `create_ranking(title, candidates_csv, rubric_json, top_k, min_overlap_pct, max_rank_distance)` | write | anyone | Freezes the candidate universe and parameters; returns the id |
-| `submit_evidence(ranking_id, ref)` | write | creator always; others while OPEN | Appends an evidence reference; max 64 refs |
-| `rank(ranking_id)` | write | anyone | Runs P4 consensus; appends a ranking |
-| `challenge(ranking_id, reason)` | write | creator | RANKED -> CHALLENGED; reason <= 280 bytes |
+| `submit_evidence(ranking_id, ref)` | write | creator always; others while OPEN | Appends an evidence reference **with its text**; max 64 refs |
+| `rank(ranking_id)` | write | anyone | Runs P4 consensus on an OPEN record; appends a ranking |
+| `challenge(ranking_id, reason)` | write | creator or an evidence submitter | RANKED -> CHALLENGED; reason <= 280 bytes |
 | `re_rank(ranking_id)` | write | anyone | CHALLENGED -> RANKED; appends the next round |
 | `close(ranking_id)` | write | creator | RANKED -> CLOSED |
 | `get_ranking`, `get_rankings`, `get_evidence`, `get_config` | view | anyone | JSON strings; history is never overwritten |
 
-Limits: 64 candidates, 8 rounds, 16 stored rankings, 64 evidence refs, 16 KiB rubric JSON,
-160-byte title, 512-byte reference, 280-byte reason. Over-limit input raises
-`EXPECTED: OVER_LIMIT`; malformed input raises `EXPECTED: INVALID_ARGUMENT`.
+Limits: 64 candidates, 8 rounds (enforced), 64 evidence refs, 16 KiB rubric JSON, 160-byte
+title, 512-byte reference, 280-byte reason. Over-limit input raises `EXPECTED: OVER_LIMIT`;
+malformed input raises `EXPECTED: INVALID_ARGUMENT`.
 
 Design decisions (open questions from AGENTS.md section 15, now resolved):
 
@@ -297,22 +358,34 @@ Design decisions (open questions from AGENTS.md section 15, now resolved):
   Ties are broken by the model's ordering; the overlap threshold and rank-distance cap
   absorb legitimate swaps.
 - **Candidate universe freezing:** frozen at creation and immutable. `subset_of` rejects any
-  id outside it — the key anti-hallucination invariant for rankings.
+  id outside it — the key anti-hallucination invariant for rankings. The check runs again
+  after consensus, so a hallucinated candidate cannot reach storage even if every validator
+  proposed it.
 - **Rank distance cap:** optional. `0` means no cap; any positive value caps the rank
   distance for entities that appear in both top-k lists.
+- **Overlap threshold floor:** `min_overlap_pct` must be at least 1. A threshold of zero
+  would accept two completely disjoint rankings, which would make the equivalence rule a
+  no-op — the same failure the pattern catalog warns about for a missing universe check.
+- **Evidence is stored, not just counted:** the reference text is part of the record and is
+  shown to the model. An identifier alone would leave the model with nothing to reason over,
+  which is the "non-deterministic evaluation not connected to evidence" failure.
 
 Consensus: the model proposes `{ranking, digest}`; validators independently re-rank and
 compare with P4 (all ids in the candidate universe; top-k overlap meets the threshold;
-rank distance within the cap). The digest is stored but never compared.
+rank distance within the cap). The digest is stored but never compared, and it is **stripped
+before the schema check** — passing it through would fail every validator with
+`UNEXPECTED_FIELD` before the overlap rule ran. `rank` and `re_rank` share one
+`_rank(ranking_id, require_challenged)` implementation, so the two entry points cannot drift
+apart.
 
-M12 evidence:
+M12/M14 evidence:
 
 ```text
 $ genvm-lint check contracts/ranking_judge.py --json
 {"ok":true,"lint":{"ok":true,"passed":3},"validate":{"ok":true,"contract":"RankingJudge","methods":10,...}}
 
 $ python3.12 -m pytest tests/direct/test_ranking_judge.py -q
-11 passed
+14 passed
 ```
 
 
@@ -324,32 +397,42 @@ including saved schemas and every transaction hash, is in
 
 | Contract | Address | Explorer |
 |---|---|---|
-| VerdictJudge | `0x34c97Ca059b36C967A11C4c4DE9bEE096e017A4a` | [address](https://explorer-studio.genlayer.com/address/0x34c97Ca059b36C967A11C4c4DE9bEE096e017A4a) |
-| WebFactAttestor | `0xAeA5d7626807B1821837313cED685d97F73eA80D` | [address](https://explorer-studio.genlayer.com/address/0xAeA5d7626807B1821837313cED685d97F73eA80D) |
+| VerdictJudge | `0x252068B9Cd0399cE5516fC8A2a04dE088FD45Ec7` | [view](https://explorer-studio.genlayer.com/address/0x252068B9Cd0399cE5516fC8A2a04dE088FD45Ec7) |
+| WebFactAttestor | `0xAAeBb09e01544e853C8ED91Ad824c0a496a6DC59` | [view](https://explorer-studio.genlayer.com/address/0xAAeBb09e01544e853C8ED91Ad824c0a496a6DC59) |
+| RankingJudge | `0x1D84b33Cab5e2a70fBFe43ACed9bF16DE63d45a0` | [view](https://explorer-studio.genlayer.com/address/0x1D84b33Cab5e2a70fBFe43ACed9bF16DE63d45a0) |
 
-StudioNet is gasless, so both deploys cost **0 GEN**.
+StudioNet is gasless, so all three deploys cost **0 GEN**.
 
 What the deployment exercised, under real consensus with real validators:
 
-| Step | VerdictJudge | WebFactAttestor |
-|---|---|---|
-| Deploy | 5/5 `agree` | 5/5 `agree` |
-| First read | `get_config` | `get_config` |
-| First write | `create_judgment` (freezes verdict set + rubric) | `create_spec` (freezes URL + 3 fact rules) |
-| Second write | `submit_evidence` | — |
-| Consensus write | `evaluate` — real LLM round, verdict `ELIGIBLE`, band `HIGH`, digest stored and not compared | `request_attestation` — live fetch of `example.com`, `source_status: OK`, facts `has_heading: false`, `mentions_documentation: true`, `word_bucket: 1`, digest `d7ee97cd` |
-| Read back | `get_judgment`, `get_assessments` | `get_spec`, `get_latest_attestation`, `get_attestations` |
+| Step | VerdictJudge | WebFactAttestor | RankingJudge |
+|---|---|---|---|
+| Deploy | 5/5 `agree` | 5/5 `agree` | 5/5 `agree` |
+| First read | `get_config` | `get_config` | `get_config` |
+| First write | `create_judgment` (freezes verdict set + rubric) | `create_spec` (freezes URL + 3 fact rules) | `create_ranking` (freezes 4 candidates + P4 parameters) |
+| Second write | `submit_evidence` | — | `submit_evidence` |
+| Consensus write | `evaluate` — real LLM round, verdict `ELIGIBLE`, band `HIGH`, digest stored and not compared | `request_attestation` — live fetch of `example.com`, `source_status: OK`, `has_heading: false`, `word_bucket: 27` | `rank` — P4 round over four candidates, top-2 with a 50 percent overlap floor |
+| Read back | `get_judgment`, `get_assessments` | `get_spec`, `get_latest_attestation`, `get_attestations` | `get_ranking`, `get_rankings`, `get_evidence` |
 
 A VerdictJudge evaluation on StudioNet produced:
 
 ```json
 {"band": "HIGH", "cited_evidence_ids": ["ev0-0"], "cited_item_ids": ["hard_income", "quality"],
- "digest": "The evidence explicitly states a verified income of 5000 per year, satisfying all rubric requirements.",
+ "digest": "The evidence explicitly states a verified income of 5000 per year, meeting both the deterministic income requirement and the qualitative sufficiency threshold.",
  "round": 1, "verdict": "ELIGIBLE"}
 ```
 
-Note the digest: it is stored for humans and excluded from the comparison, exactly as the
-P1 pattern specifies.
+A RankingJudge round stored both the evidence and the ranking:
+
+```json
+{"evidence": [{"evidence_id": "ev0-0", "ref": "Question: which vendors have the better uptime record? …"}],
+ "ranking_history": ["{\"ranking\": [\"acme\", \"initech\", \"globex\", \"umbrella\"], \"round\": 1, \"digest\": \"…\"}"],
+ "status": "RANKED", "round_count": 1}
+```
+
+Note the two digests: they are stored for humans and excluded from the comparison, exactly as
+the P1 and P4 patterns specify. The RankingJudge digest is stripped before the P4 schema
+check — passing it through would fail every validator with `UNEXPECTED_FIELD`.
 
 Testnet (Bradbury / Asimov) deployment is **not** done: it needs a funded account, and
 claiming testnet GEN at the faucet is a browser step that cannot be automated.

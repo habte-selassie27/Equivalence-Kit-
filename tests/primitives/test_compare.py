@@ -2,6 +2,8 @@ import random
 
 import pytest
 
+from equivalencekit.errors import KitError
+
 from equivalencekit.compare import (
     OK,
     all_of,
@@ -15,7 +17,9 @@ from equivalencekit.compare import (
     overlap_at_least,
     set_equal,
     subset_of,
+    normalize_facts,
     topk_overlap,
+    validate_facts,
 )
 
 BANDS = ("LOW", "MEDIUM", "HIGH")
@@ -106,6 +110,81 @@ def test_facts_match_per_rule_and_missing_extra():
         facts_match({**leader, "count": 10}, {**validator, "count": 13}, rules).reason
         == "FACT_MISMATCH"
     )
+
+
+def test_validate_facts_checks_shape_and_range_without_comparing():
+    rules = {
+        "has_price": {"kind": "bool"},
+        "plan": {"kind": "enum", "allowed": ("FREE", "PRO", "ENTERPRISE")},
+        "words": {"kind": "bucket", "edges": (300, 1000)},
+        "count": {"kind": "int_abs", "delta": 2},
+    }
+    good = {"has_price": "yes", "plan": "PRO", "words": 900, "count": 10}
+    assert validate_facts(good, rules).ok
+
+    # A missing fact, an extra fact, a wrong type, an unknown enum, and a
+    # non-integer bucket all fail the shape check.
+    missing = {key: value for key, value in good.items() if key != "plan"}
+    assert validate_facts(missing, rules).reason == "FACT_MISSING"
+    assert validate_facts({**good, "extra": 1}, rules).reason == "FACT_EXTRA"
+    assert validate_facts({**good, "has_price": "maybe"}, rules).reason == "FACT_MISMATCH"
+    assert validate_facts({**good, "plan": "MAYBE"}, rules).reason == "FACT_MISMATCH"
+    assert validate_facts({**good, "words": "many"}, rules).reason == "FACT_MISMATCH"
+    assert validate_facts({**good, "count": "ten"}, rules).reason == "FACT_MISMATCH"
+    # A numeric string is a valid integer fact; normalize_int accepts it by design.
+    assert validate_facts({**good, "count": "10"}, rules).ok
+
+    # It is a validator, not a comparison: it never decides agreement.
+    assert validate_facts(good, rules).ok is True
+    assert validate_facts({"has_price": True, "plan": "FREE", "words": 0, "count": 0}, rules).ok
+
+
+def test_normalize_facts_returns_the_canonical_values():
+    rules = {
+        "has_price": {"kind": "bool"},
+        "plan": {"kind": "enum", "allowed": ("FREE", "PRO", "ENTERPRISE")},
+        "words": {"kind": "bucket", "edges": (300, 1000)},
+        "count": {"kind": "int_abs", "delta": 2},
+    }
+    raw = {"has_price": "yes", "plan": "pro", "words": 900, "count": "10"}
+    canonical = normalize_facts(raw, rules)
+
+    # A boolean is a boolean, an enum is the canonical label, a bucket keeps the raw
+    # measurement, and an integer is an integer.
+    assert canonical == {
+        "has_price": True,
+        "plan": "PRO",
+        "words": 900,
+        "count": 10,
+    }
+    assert isinstance(canonical["has_price"], bool)
+    assert isinstance(canonical["count"], int)
+
+    # The input is not mutated.
+    assert raw["has_price"] == "yes"
+
+
+def test_normalize_facts_rejects_bad_shapes_and_values():
+    rules = {
+        "has_price": {"kind": "bool"},
+        "plan": {"kind": "enum", "allowed": ("FREE", "PRO")},
+    }
+    with pytest.raises(KitError):
+        normalize_facts({"has_price": True}, rules)  # missing
+    with pytest.raises(KitError):
+        normalize_facts({"has_price": True, "plan": "PRO", "x": 1}, rules)  # extra
+    with pytest.raises(KitError):
+        normalize_facts({"has_price": "maybe", "plan": "PRO"}, rules)  # bad bool
+    with pytest.raises(KitError):
+        normalize_facts({"has_price": True, "plan": "MAYBE"}, rules)  # bad enum
+    with pytest.raises(ValueError):
+        normalize_facts({"x": 1}, {"x": {"kind": "not_a_kind"}})  # bad rule
+
+
+def test_validate_facts_propagates_a_malformed_rule():
+    rules = {"x": {"kind": "not_a_kind"}}
+    with pytest.raises(ValueError):
+        validate_facts({"x": 1}, rules)
 
 
 def test_consistent_with_rule_table():

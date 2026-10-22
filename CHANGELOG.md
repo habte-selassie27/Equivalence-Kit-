@@ -4,6 +4,79 @@ All notable changes to EquivalenceKit are recorded here. Format follows Keep a C
 
 ## [Unreleased]
 
+### Fixed — M14 security audit of the three reference contracts
+
+A senior audit of `verdict_judge`, `web_fact_attestor`, and `ranking_judge` found one
+HIGH and five MEDIUM issues, plus a set of design and maintainability items. All P0, P1,
+and P2 findings are fixed; the P3 items are fixed where they were free.
+
+- **HIGH — `ranking_judge` discarded submitted evidence.** The reference text was
+  validated and then dropped; the model received only identifiers (`ev0-0`) as its data,
+  so the contract performed non-deterministic evaluation with no evidence. The evidence is
+  now stored as a record and rendered into the prompt, and a sentinel-prompt test proves
+  it reaches the model.
+- **MEDIUM — `ranking_judge` declared round and history caps it never enforced.** Now
+  enforced on the round count; `get_config()` reports only limits that are enforced.
+- **MEDIUM — `ranking_judge` permitted a vacuous equivalence rule.** `min_overlap_pct = 0`
+  accepted two completely disjoint rankings; there is now a floor of 1 percent.
+- **MEDIUM — `web_fact_attestor` accepted any URL.** HTTPS is now required and literal
+  loopback, link-local, and private hosts are rejected, so a spec creator cannot aim the
+  validators at their own network or at cloud instance metadata.
+- **MEDIUM — `web_fact_attestor` stored a leader-supplied, unverified digest under a name
+  that overstated it.** Renamed to `leader_snapshot_digest` and documented as the leader's
+  own fingerprint, never compared.
+- **MEDIUM — `web_fact_attestor` rounds were griefable and unattributable.** Only the spec
+  creator or the previous requester may open a later round.
+- **MEDIUM — `verdict_judge.evaluate` also accepted a CHALLENGED judgment**, making
+  `re_evaluate` redundant. `evaluate` now requires OPEN.
+- **MEDIUM — `ranking_judge.challenge` was creator-only** while `submit_evidence` was
+  permissionless. Evidence submitters may now challenge, matching `verdict_judge`.
+- **LOW — `verdict_judge.submit_evidence` relied on the SDK's write-through behaviour**
+  for a nested `DynArray`. It now uses `copy_to_memory` plus an explicit write-back, like
+  every other method.
+- **LOW — `ranking_judge` duplicated its consensus block** in `rank` and `re_rank`. Both
+  now call one `_rank(ranking_id, require_challenged)` helper.
+- **LOW — the post-consensus fact check compared the agreed facts with themselves.** A
+  dedicated `validate_facts(facts, rules)` primitive now expresses the intent.
+- **LOW — `verdict_judge` spent a consensus round when every verdict was forbidden.** It
+  now fails with `EXPECTED: INVALID_STATE` before asking the model.
+- **HIGH — `ranking_judge` passed its human-facing digest into the P4 schema check.** The
+  pattern's field set is `("ranking",)`, so every validator failed with `UNEXPECTED_FIELD`
+  before the overlap rule ran and a ranking round could never finalize. Direct tests missed
+  it because direct mode executes the leader only; the live StudioNet round exposed it. The
+  digest is now stripped at the call site, and a validator-level direct test covers it
+  (anti-pattern A23).
+
+New in this pass:
+- `equivalencekit/compare.py::validate_facts`: shape and range validation of one fact set,
+  which never claims to compare two sets. Covered by the vendored-equivalence gate.
+- `tests/integration/test_ranking_judge_consensus.py`: RankingJudge under real consensus.
+- `tests/deploy/test_studionet_deployment.py` now also deploys RankingJudge.
+- `docs/anti-patterns.md`: six new entries (A17–A22) for the audit findings.
+- `docs/threat-model.md`: seven new threats (T16–T22) and four new residual risks.
+
+### Changed — a bucket fact holds the raw measurement
+
+A `BUCKET_WORD_COUNT` fact now stores the **raw word count**, not the bucket index. The
+comparator buckets both sides under the rule's edges, which is what lets two fetches that
+differ by a few words still agree — and it keeps the stored fact informative. Previously the
+contract stored the index while `bucket_adjacent` (which buckets both sides) expected a
+measurement, so the two disagreed about what a bucket fact meant.
+
+Stored facts are now canonical in general: a boolean is `True`/`False`, an enum is the
+canonical label, a bucket is the raw integer measurement. The model may return `"yes"` or
+`"pro"`; what reaches storage is the normalized value, so a consumer never has to handle
+two shapes. `equivalencekit/compare.py::normalize_facts` does the work and
+`validate_facts` is the non-throwing wrapper.
+
+### Changed — StudioNet tests no longer need a local node
+
+`gltest`'s `ContractFactory.deploy` asks the *local* node to synthesize a schema from the
+contract source, and `gen_getContractSchemaForCode` is a localnet-only capability. The
+StudioNet tests now deploy the transaction and fetch the schema of the deployed address
+from the hosted API (`gen_getContractSchema`), so they no longer depend on a local node
+running. See `tests/helpers.py::deploy_contract`.
+
 ### Added — M1 research and verified API ledger
 - `docs/contracts.md`: verified GenLayer API ledger (header format, storage classes,
   non-determinism API, web access, LLM calls) with the single-file import-strategy finding.
@@ -98,6 +171,56 @@ All notable changes to EquivalenceKit are recorded here. Format follows Keep a C
 - `playground/src/data/*`: generated site data (9 files), committed and staleness-checked.
 - `tests/site/` (planned) left as a TODO; the staleness check runs via
   `tools/export_site_data.py --check`.
+
+### Changed — M-UI visual polish pass
+- Same token palette (UI.md 3.3), same restraint rules — radius 2/6, one border weight,
+  elevation reserved — but sharper execution everywhere: hairline internal rules
+  (`--rule-soft`), hatched perturbation-bar remainder, uppercase table kickers, row-hover
+  states, focus rings on every control, text-wrap balance for headings.
+- Motion, all disabled under `prefers-reduced-motion`: one screen entrance per navigation,
+  loading-dot pulse, toast and bar-fill transitions, pattern-list and guide-option hover
+  feedback, rotating boundary-disclosure caret.
+- Optional dark scheme now ships with a manual override: one dark token block on
+  `[data-theme="dark"]` (no duplicated media-query copy to drift out of step), stamped
+  before first paint by an inline bootstrap, plus a header cycle control
+  (Auto → Light → Dark) with `localStorage` persistence and OS-preference following
+  while in Auto. A tokens test pins that the dark block covers every theme-dependent
+  token and never invents one. `color-scheme` and `theme-color` are kept in step at
+  runtime. Contrast for all text roles re-checked against the dark surfaces.
+- Shell: translucent sticky header with blur, tighter toolbar selects that size to
+  content, inline SVG favicon echoing the two track markers.
+- Playground: 58 tests green, typecheck and production build clean after the pass.
+
+### Fixed — M-UI playground conformance pass
+- Engine boot: the Pyodide worker wrote package files to URL-shaped filesystem paths and
+  returned raw JSON strings to the main thread. Package files now mount under a clean
+  `/lib` path and every response is parsed to a structured result; the engine reaches
+  "Engine ready" and live per-field ledgers render.
+- Status honesty: a failed engine reply during warm-up now moves the status line to
+  "Using precomputed results" instead of sitting on "Loading the engine" forever, with a
+  Retry affordance. Free-form runs are disabled while failed (stored results still shown).
+- Tracebacks never leak: worker error classification strips frames and keeps only the
+  final exception line; playground error notices use the copy deck (classified codes,
+  timeout line, engine-failed line).
+- Parameters: `export_site_data.py` now emits the canonical context plus structured
+  per-case variance instead of pipe-joined dumps; SpecSheet and the tightness report
+  phrase parameters in plain terms ("within 100 or 10000 basis points"), with exercised
+  variance shown per case.
+- Patterns screen: list-and-spec layout with URL-persisted selection, a field-rule
+  column, and the matrix provably beside the spec.
+- Playground: case dropdown grouped must-accept/must-reject/boundary; editable context
+  editor (universes, tolerances, code-decided results); bounded seed input; editor size
+  shown against the cap; screen-reader result announcements; richer "copy as test case"
+  payload (expected, reason, context, pattern).
+- Tightness report: harmful bars now read "rejected/accepted" correctly (they could say a
+  harmful variation was accepted); per-pattern parameter summaries; boundary cases link
+  "Try in playground"; "How to read this" panel.
+- Decision guide: rebuilt as a real stepper — one question per step, 2–4 answers, a
+  running summary, hash-persisted state, and a recommendation card that links to the
+  recommended pattern with the canonical example preloaded.
+- Tests: 58 playground tests green (12 new), typecheck and production build clean.
+- Housekeeping: regenerated vendored primitive blocks after `validate_facts` joined
+  `compare.py` (the vendored-equivalence gate requires the blocks to stay fresh).
 
 ### Added — M11 documentation
 - `docs/pattern-catalog.md`, `docs/decision-guide.md`, `docs/tightness-testing.md`,

@@ -124,8 +124,23 @@ guards verdicts that the *deterministic* rubric can forbid.
 `SOURCE_STATES = ("OK", "UNAVAILABLE")`. Each fact carries its own rule: `bool` exact,
 `enum` exact, `bucket` adjacent, or `int` within a tolerance.
 
+A **bucket** fact holds the raw measurement, not the bucket index. The comparator buckets
+both sides under the rule's edges, which is what lets two fetches that differ by a few words
+still agree — and it keeps the stored fact informative (a reader sees the count, not an
+opaque index).
+
 **Invariants:** `UNAVAILABLE` implies the fact set is empty. A source that cannot be read
 produces no facts — it never produces `false` facts.
+
+**Source requirements (the contract's job, not the comparator's):** the URL is the one input
+the caller controls completely, so the contract must bound it. Use **HTTPS only** — on plain
+http an on-path attacker can serve identical bytes to every validator, and they would
+agree on a false fact. Reject literal loopback, link-local, and private hosts so the
+validators cannot be aimed at their own network. A "snapshot digest" of the page is audit
+metadata only: each validator fetches independently and may see different bytes, so a digest
+that is not checked by every validator is the *leader's* fingerprint, not a fingerprint of
+what was agreed. Name it accordingly (`leader_snapshot_digest`) and never present it as
+proof of content.
 
 **Tolerance rationale:** dates and counts are bucketed so that legitimate variation at a
 boundary does not flip a decision; headings are matched by normalized key plus the documented
@@ -144,15 +159,20 @@ the same facts.
 
 | Category | Leader | Validator | Expected |
 |---|---|---|---|
-| accept | `{"b": true, "n": 1}` | `{"b": "yes", "n": 1}` | accept (bool token) |
-| accept | `word_bucket: 0` | `word_bucket: 1` | accept (adjacent bucket) |
-| accept | `source_status: "OK"` | `"ok"` | accept (casing) |
+| accept | `{"b": true, "plan": "PRO", "n": 500}` | identical | accept |
+| accept | `n: 300` | `n: 301` | accept (same bucket, one count apart) |
+| accept | `source_status: "ok"`, `b: "yes"`, `plan: "pro"` | `source_status: "OK"`, `b: true`, `plan: "PRO"` | accept (casing and bool/enum tokens) |
+| accept | facts in one order | facts in another order | accept (fact order is not meaning) |
 | reject | `{"b": true}` | `{"b": false}` | reject `FACT_MISMATCH` |
-| reject | `{"b": true}` | `{"b": true, "extra": 1}` | reject `FACT_EXTRA` |
+| reject | `{"b": true, "plan": "PRO"}` | `{"b": true}` | reject `FACT_MISSING` |
+| reject | `{"b": true}` | `{"b": true, "plan": "PRO"}` | reject `FACT_EXTRA` |
 | reject | `source_status: "OK"` | `"UNAVAILABLE"` | reject `SOURCE_MISMATCH` |
+| reject | `n: 300` | `n: 1001` | reject `FACT_MISMATCH` (buckets too far apart) |
+| reject | `plan: "PRO"` | `plan: "FREE"` | reject `FACT_MISMATCH` |
 | reject | `{"b": false}` under `UNAVAILABLE` | | reject `INVARIANT_VIOLATION` |
-| boundary | count exactly on a bucket edge | | accept in both runs |
-| boundary | count across a bucket edge | | accept if adjacent |
+| boundary | `n: 300` (exactly on the edge) | `n: 300` | accept in both runs |
+| boundary | `n: 300` | `n: 301` | accept (still the same bucket) |
+| boundary | `n: 300` | `n: 1001` | reject (two buckets apart) |
 
 ---
 
@@ -206,11 +226,14 @@ detected by the tolerance alone.
 
 **Tolerance rationale:** near-ties legitimately swap inside the top-k. The overlap threshold
 and the optional rank-distance cap are explicit integers so the rule is tunable and provable.
+The threshold has a **floor of 1 percent**: at 0 the check is vacuous — two completely
+disjoint rankings would be "equivalent" — which would leave the rule asserting nothing.
 
 **Failure behavior:** `LLM_ERROR UNKNOWN_ID` or `TOPK_MISMATCH`; state unchanged.
 
 **Known limits:** a shared bias in candidate *selection* is invisible — the rule only grades
-the ordering it is given.
+the ordering it is given. A model that cannot rank at all must still emit an ordering; P4
+has no "unrankable" state (see the P6 note on `UNAVAILABLE`).
 
 ### Acceptance matrix (`tests/matrices/P4.json`)
 
@@ -221,6 +244,10 @@ the ordering it is given.
 | reject | `[a, b, zz]` | | reject `UNKNOWN_ID` (universe check) |
 | boundary | exactly at the overlap threshold | | accept |
 | boundary | one rank crossing the cutoff | | reject |
+
+The 1 percent floor is enforced where the pattern is *configured* (the contract's
+`create_ranking`), not in the comparator, so it is a parameter constraint rather than a
+matrix case.
 
 ---
 

@@ -43,6 +43,14 @@ model- and web-controlled. The comparator is the last gate and must reject, not 
 | T13 | **Float non-determinism across runners** | Two runner versions round differently | Integers only: basis points and cross-multiplication | `compare.py` |
 | T14 | **Storage mutation bypasses consensus** | Write inside the nondet block | State changes happen only after `run_nondet_unsafe` returns | `contracts/*.py`, lint |
 | T15 | **Forged digest presented as proof** | Digest treated as a security guarantee | Digest is labeled non-cryptographic, stored for audit only, never compared | `digest.py` |
+| T16 | **Evidence collected but never weighed** | The model is asked to judge while receiving only identifiers | The reference text is stored *and* shown to the model; a sentinel-prompt test proves it | `ranking_judge.py`, `test_ranking_judge.py::test_submitted_evidence_reaches_the_model_and_the_record`, anti-pattern A17 |
+| T17 | **A vacuous equivalence rule** | The caller configures a tolerance of zero | A documented floor on the parameter; the universe and overlap checks both apply | `ranking_judge.py::create_ranking`, anti-pattern A18 |
+| T18 | **Declared limits that are not enforced** | The contract advertises a cap it never checks | Every advertised limit is checked where the state grows | `ranking_judge.py::_rank`, anti-pattern A19 |
+| T19 | **SSRF into validator-side networks** | A spec creator aims every validator at `127.0.0.1` or `169.254.169.254` | HTTPS only; literal loopback, link-local, and private hosts rejected | `web_fact_attestor.py::_freeze_url`, anti-pattern A20 |
+| T20 | **Confidently false fact from a tampered source** | Plain http lets an on-path attacker serve the same bytes to every validator | HTTPS only; a tampered source is caught by the transport, not by the rule | `web_fact_attestor.py::_freeze_url`, anti-pattern A20 |
+| T21 | **A digest that overstates what it proves** | A reader treats the leader's fingerprint as proof of page content | The field is named `leader_snapshot_digest` and documented as the leader's own, uncompared value | `web_fact_attestor.py`, anti-pattern A21 |
+| T22 | **Unattributable, griefable rounds** | A third party burns a spec's round budget | Only the spec creator or the previous requester may open a later round | `web_fact_attestor.py::request_attestation`, anti-pattern A22 |
+| T23 | **A rule that never finalizes** | The validator path fails for a reason unrelated to the decision (a non-compared field reaching a strict schema check, a field name mismatch, an exception), so every validator disagrees and no round can ever settle | Validator-level direct tests (`direct_vm.run_validator`), a live consensus test per contract, and the retry helper's loud final failure | `tests/direct/*`, `tests/integration/*`, anti-pattern A23 |
 
 ## Attacker capabilities considered
 
@@ -72,6 +80,17 @@ Stated plainly, because a threat model that omits its own limits is marketing:
 5. **A wrong tolerance that is internally consistent.** If the tolerance is too loose and
    the perturbations do not model the real failure, tightness testing will not catch it.
    Real-run feedback (milestone M8) is the corrective.
+6. **A public hostname that resolves to a private address.** The URL filter is a literal
+   check, because GenVM has no DNS resolution and resolving would itself be a
+   non-deterministic operation. A name like `internal.corp.example` that resolves to
+   `10.0.0.5` is not caught; the validator's own network policy is the backstop.
+7. **A page that changes between fetches.** Validators fetch independently, so a dynamic
+   page can yield different bytes for different validators. That is why the page is
+   truncated and the facts are bucketed rather than compared byte for byte — and why the
+   stored digest is the *leader's* fingerprint only. A rule that demanded identical bytes
+   would disagree on any live page.
+8. **A model that cannot answer at all.** P4 has no "unrankable" state: a model that
+   cannot rank must still emit an ordering. P2 and P6 have `UNAVAILABLE`; P1 and P4 do not.
 
 ## Residual risks accepted on purpose
 

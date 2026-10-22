@@ -242,6 +242,55 @@ def facts_match(leader, validator, rules) -> Comparison:
     return OK
 
 
+def validate_facts(facts, rules) -> Comparison:
+    """Validate one fact set against its rules, without comparing it to another set.
+
+    This is a shape and range check, not an agreement check. It rejects a fact set that
+    is missing a required fact, carries an extra fact, or holds a value of the wrong
+    type or out of range. It never decides whether two validators agree — that is
+    ``facts_match``.
+
+    Used after consensus to confirm the agreed fact set is well formed before it is
+    written to storage.
+    """
+
+    if not isinstance(facts, dict) or not isinstance(rules, dict):
+        return _fail("FACT_MISMATCH")
+    required = set(rules)
+    if set(facts) - required:
+        return _fail("FACT_EXTRA")
+    if required - set(facts):
+        return _fail("FACT_MISSING")
+
+    for name in sorted(required):
+        rule = rules[name]
+        value = facts[name]
+        kind = rule.get("kind")
+        try:
+            if kind == "bool":
+                normalize_bool(value)
+            elif kind == "enum":
+                normalize_enum(value, rule["allowed"], rule.get("aliases"))
+            elif kind == "bucket":
+                bucketize(value, tuple(rule["edges"]))
+            elif kind == "int_abs":
+                normalize_int(value)
+            elif kind == "int_bps":
+                normalize_int(value)
+            elif kind == "text":
+                normalize_text(value)
+            else:
+                raise ValueError(f"unknown fact rule kind: {kind!r}")
+        except KitError:
+            # A data problem: wrong type, unknown enum, out of range.
+            return _fail("FACT_MISMATCH")
+        except (TypeError, ValueError):
+            # A malformed rule (unknown kind, empty allowed set) is a programming
+            # error, not a data problem; let it propagate.
+            raise
+    return OK
+
+
 def consistent_with(verdict, checks, forbidden) -> Comparison:
     """Rule-table invariant: a failed check forbids listed verdicts.
 

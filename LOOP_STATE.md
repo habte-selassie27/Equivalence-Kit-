@@ -2,32 +2,98 @@
 
 ## Current state
 
-- Pass: 13
-- Current milestone: M10 — testnet deployment (blocked on user funding the faucet)
-- Last completed milestone: M12 — RankingJudge stretch contract
+- Pass: 14
+- Current milestone: M14 — security audit fixes, complete
+- Last completed milestone: M14 — every P0/P1/P2 audit finding fixed, covered by tests, and
+  verified under real StudioNet consensus
 - Stall counter: 0
-- Last scores: 241 Python tests passed (58 primitives, 146 matrices/direct/vendored, 26 direct
-  + 11 ranking); 5 live tests skipped without `--network`; 4 integration + 1 deployment test
-  pass on StudioNet; 4 contracts lint clean; vendor fresh; tightness 60/60; site data up to
-  date; 41 playground tests pass; playground production build succeeds
+- Last scores: 257 local tests passed (60 primitives, 159 matrices/vendored, 38 direct);
+  4 contracts lint clean; vendor fresh; tightness 60/60 / 60/60; site data up to date;
+  74 playground tests pass, typecheck and build clean;
+  StudioNet integration + deployment suite **6 passed in 524.20s**
+
+## Audit findings and their fixes
+
+| ID | Finding | Severity | Status |
+|---|---|---|---|
+| H-1 | `ranking_judge` discarded submitted evidence; the model ranked with no evidence | HIGH | fixed — evidence stored and shown to the model; sentinel-prompt test |
+| H-2 | `ranking_judge` declared round/history caps it never enforced | MEDIUM | fixed — one enforced cap, `get_config()` tells the truth |
+| H-3 | `web_fact_attestor` accepted any URL (SSRF, plain http) | MEDIUM–HIGH | fixed — https only, private/loopback/link-local hosts rejected |
+| H-4 | `web_fact_attestor` stored a leader-supplied digest under an overstated name | MEDIUM | fixed — renamed `leader_snapshot_digest`, documented |
+| H-5 | `ranking_judge` permitted `min_overlap_pct = 0` (vacuous rule) | MEDIUM | fixed — floor of 1 percent |
+| H-6 | `web_fact_attestor` rounds were griefable and unattributable | MEDIUM | fixed — creator or previous requester only |
+| M-1 | `verdict_judge.evaluate` also accepted CHALLENGED | MEDIUM | fixed — `evaluate` requires OPEN |
+| M-2 | `ranking_judge.challenge` was creator-only | MEDIUM | fixed — evidence submitters may challenge |
+| M-3 | `verdict_judge.submit_evidence` relied on SDK write-through | LOW | fixed — uniform copy-then-write-back |
+| M-4 | `ranking_judge` duplicated its consensus block | LOW | fixed — one `_rank` helper |
+| M-5 | the post-consensus fact check compared the facts with themselves | LOW | fixed — `validate_facts` primitive |
+| M-6 | `verdict_judge` spent a round when every verdict was forbidden | LOW | fixed — explicit `INVALID_STATE` |
+| M-7 | permissionless consensus triggers undocumented | INFO | fixed — docstrings state it |
+| M-8 | P4 has no "unrankable" state | INFO | documented as a pattern-level gap |
+| M-9 | `ranking_judge` showed raw rubric JSON to the model | INFO | fixed — rendered like `verdict_judge` |
+
+Two further issues were found while implementing and fixed:
+
+- **A bucket fact held the bucket index** while `bucket_adjacent` expects a raw measurement,
+  so the contract and the comparator disagreed about what a bucket fact was. A bucket fact now
+  holds the raw measurement; the comparator buckets both sides.
+- **Stored facts were not canonical** — a boolean could be stored as `"yes"`. `normalize_facts`
+  now canonicalizes every value before it reaches storage.
+- **`ranking_judge` passed its digest into the P4 schema check**, so every validator returned
+  `UNEXPECTED_FIELD` and a ranking round could never finalize. Found by the live StudioNet
+  round, not by the direct tests, because direct mode executes the leader only. Fixed by
+  stripping the digest at the call site, with a validator-level direct test
+  (`run_validator`) and anti-pattern A23.
 
 ## Live deployments (StudioNet, gasless)
 
+Regenerated 2026-10-22 by a clean run of `tests/deploy/test_studionet_deployment.py`
+(`6 passed in 524.20s`). The full record, including saved schemas and every transaction hash,
+is in `deployments/studionet.md`.
+
 | Contract | Address |
 |---|---|
-| VerdictJudge | `0x34c97Ca059b36C967A11C4c4DE9bEE096e017A4a` |
-| WebFactAttestor | `0xAeA5d7626807B1821837313cED685d97F73eA80D` |
+| VerdictJudge | `0x252068B9Cd0399cE5516fC8A2a04dE088FD45Ec7` |
+| WebFactAttestor | `0xAAeBb09e01544e853C8ED91Ad824c0a496a6DC59` |
+| RankingJudge | `0x1D84b33Cab5e2a70fBFe43ACed9bF16DE63d45a0` |
 
-Full record: `deployments/studionet.md`.
+## Verification (pass 14)
+
+```text
+$ python3.12 -m pytest tests/primitives tests/matrices tests/direct -q
+257 passed in 1.84s
+
+$ genvm-lint check contracts/<file>.py --json      # verdict_judge, web_fact_attestor,
+                                                   # ranking_judge, consensus_probe
+{"ok":true,...} x4
+
+$ python3.12 tools/vendor.py --check               # fresh
+$ python3.12 tools/tightness.py
+Total: 106 matrix cases
+Harmless acceptance: 60/60
+Harmful rejection: 60/60
+
+$ python3.12 tools/export_site_data.py --check
+site data is up to date (9 files)
+
+$ python3.12 -m pytest tests/integration tests/deploy -v -s --network studionet
+6 passed in 524.20s
+```
 
 ## Open gaps
 
-1. M10 testnet deployment (Bradbury/Asimov) — hard stop, needs funded account at faucet.
+1. M10 testnet deployment (Bradbury/Asimov) — hard stop, needs funded account at the faucet.
 2. M-UI-8 hosting — manual deploy to any static host.
-3. (Optional) Integration tests for RankingJudge on StudioNet.
+3. The local GenLayer node (jsonrpc + postgres) is down because the host already occupies
+   :5432. The StudioNet tests no longer need it: they fetch the schema of the deployed
+   address from the hosted API instead of asking the local node to synthesize one.
+4. A live model is not unanimous. Two real StudioNet rounds were refused by the rules
+   (a P1 verdict split, a P4 top-2 split). Both were the rules working. The rubric and the
+   P4 parameters were corrected, and the live tests retry inside the contract's own
+   semantics. Documented in `docs/tightness-testing.md` section 5. The final suite passes
+   all six tests unassisted after the P4 digest fix.
 
 ## Next step
 
-Claim testnet GEN at https://testnet-faucet.genlayer.foundation/ (browser only), then deploy
-all three reference contracts to Bradbury and record addresses, schemas, and explorer links.
-Alternatively, host the playground at any static host and add the live URL to the README.
+Commit pass 14. Then M10 (Bradbury/Asimov) remains the only milestone: it needs a funded
+account, and the faucet is a browser step.

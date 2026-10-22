@@ -205,11 +205,102 @@ COMPARE_SAMPLES = {
             {},
         ),
     ],
+    "normalize_facts": [
+        (
+            (
+                {"b": "yes", "plan": "pro", "words": 900},
+                {
+                    "rules": {
+                        "b": {"kind": "bool"},
+                        "plan": {"kind": "enum", "allowed": ["FREE", "PRO"]},
+                        "words": {"kind": "bucket", "edges": [300, 1000]},
+                    }
+                },
+            ),
+            {},
+        ),
+        (
+            (
+                {"b": "yes", "plan": "MAYBE", "words": 900},
+                {
+                    "rules": {
+                        "b": {"kind": "bool"},
+                        "plan": {"kind": "enum", "allowed": ["FREE", "PRO"]},
+                        "words": {"kind": "bucket", "edges": [300, 1000]},
+                    }
+                },
+            ),
+            {},
+        ),
+        (
+            (
+                {"b": True},
+                {"rules": {"b": {"kind": "bool"}}},
+            ),
+            {},
+        ),
+        (
+            (
+                {"b": True, "extra": 1},
+                {"rules": {"b": {"kind": "bool"}}},
+            ),
+            {},
+        ),
+    ],
     "consistent_with": [
         (("ELIGIBLE", {"hard": False}, {"hard": ["ELIGIBLE"]}), {}),
         (("INELIGIBLE", {"hard": False}, {"hard": ["ELIGIBLE"]}), {}),
         (("ELIGIBLE", {"hard": True}, {"hard": ["ELIGIBLE"]}), {}),
         (("ANY", {}, {}), {}),
+    ],
+    "validate_facts": [
+        (
+            (
+                {"b": True, "plan": "PRO", "words": 900},
+                {
+                    "rules": {
+                        "b": {"kind": "bool"},
+                        "plan": {"kind": "enum", "allowed": ["FREE", "PRO"]},
+                        "words": {"kind": "bucket", "edges": [300, 1000]},
+                    }
+                },
+            ),
+            {},
+        ),
+        (
+            (
+                {"b": True, "plan": "MAYBE", "words": 900},
+                {
+                    "rules": {
+                        "b": {"kind": "bool"},
+                        "plan": {"kind": "enum", "allowed": ["FREE", "PRO"]},
+                        "words": {"kind": "bucket", "edges": [300, 1000]},
+                    }
+                },
+            ),
+            {},
+        ),
+        (
+            (
+                {"b": True},
+                {"rules": {"b": {"kind": "bool"}}},
+            ),
+            {},
+        ),
+        (
+            (
+                {"b": True, "extra": 1},
+                {"rules": {"b": {"kind": "bool"}}},
+            ),
+            {},
+        ),
+        (
+            (
+                {"b": "maybe"},
+                {"rules": {"b": {"kind": "bool"}}},
+            ),
+            {},
+        ),
     ],
 }
 

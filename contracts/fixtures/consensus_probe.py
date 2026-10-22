@@ -493,6 +493,62 @@ def facts_match(leader, validator, rules) -> Comparison:
         else:
             raise ValueError(f'unknown fact rule kind: {kind!r}')
     return OK
+def normalize_facts(facts, rules) -> dict:
+    """Canonical form of a fact set: every value normalized by its own rule.
+
+    Raises ``KitError`` when a value is of the wrong type, out of range, or not in the
+    allowed set, and ``ValueError`` when the *rule* itself is malformed. The returned
+    dict has the same keys as the input, so a stored fact set always has a stable type:
+    a boolean is ``True``/``False``, an enum is the canonical label, a bucket is an int.
+    """
+    if not isinstance(facts, dict) or not isinstance(rules, dict):
+        raise KitError('LLM_ERROR', 'WRONG_TYPE')
+    required = set(rules)
+    if set(facts) - required:
+        raise KitError('LLM_ERROR', 'UNKNOWN_KEY')
+    if required - set(facts):
+        raise KitError('LLM_ERROR', 'MISSING_KEY')
+    canonical = {}
+    for name in sorted(required):
+        rule = rules[name]
+        value = facts[name]
+        kind = rule.get('kind')
+        if kind == 'bool':
+            canonical[name] = normalize_bool(value)
+        elif kind == 'enum':
+            canonical[name] = normalize_enum(value, rule['allowed'], rule.get('aliases'))
+        elif kind == 'bucket':
+            bucketize(value, tuple(rule['edges']))
+            canonical[name] = normalize_int(value)
+        elif kind == 'int_abs':
+            canonical[name] = normalize_int(value)
+        elif kind == 'int_bps':
+            canonical[name] = normalize_int(value)
+        elif kind == 'text':
+            canonical[name] = normalize_text(value)
+        else:
+            raise ValueError(f'unknown fact rule kind: {kind!r}')
+    return canonical
+def validate_facts(facts, rules) -> Comparison:
+    """Validate one fact set against its rules, without comparing it to another set.
+
+    This is a shape and range check, not an agreement check. It rejects a fact set that
+    is missing a required fact, carries an extra fact, or holds a value of the wrong
+    type or out of range. It never decides whether two validators agree — that is
+    ``facts_match``.
+
+    Used after consensus to confirm the agreed fact set is well formed before it is
+    written to storage.
+    """
+    try:
+        normalize_facts(facts, rules)
+    except KitError as error:
+        if error.reason == 'MISSING_KEY':
+            return _fail('FACT_MISSING')
+        if error.reason == 'UNKNOWN_KEY':
+            return _fail('FACT_EXTRA')
+        return _fail('FACT_MISMATCH')
+    return OK
 def consistent_with(verdict, checks, forbidden) -> Comparison:
     """Rule-table invariant: a failed check forbids listed verdicts.
 

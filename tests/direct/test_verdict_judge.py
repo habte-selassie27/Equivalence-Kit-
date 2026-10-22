@@ -280,3 +280,71 @@ def test_hostile_evidence_cannot_override_code_decided_result(direct_vm, direct_
     assessment = _assessment(judge)
     assert assessment["verdict"] == "INELIGIBLE"
     assert assessment["cited_item_ids"] == ["hard_income"]
+
+
+def test_evaluate_requires_open_and_re_evaluate_requires_challenged(direct_vm, direct_deploy):
+    """The challenge state machine has one path per transition."""
+
+    judge = _new(direct_deploy)
+    judge.submit_evidence(0, "income is 5000 per year")
+    _mock(direct_vm, GOOD)
+    judge.evaluate(0)
+    assert json.loads(judge.get_judgment(0))["status"] == "EVALUATED"
+
+    # A second evaluate on an EVALUATED judgment is not a valid transition.
+    with direct_vm.expect_revert("EXPECTED: INVALID_STATE"):
+        judge.evaluate(0)
+
+    judge.challenge(0, "Please re-check.")
+    assert json.loads(judge.get_judgment(0))["status"] == "CHALLENGED"
+
+    # After a challenge, only re_evaluate may produce the next round.
+    with direct_vm.expect_revert("EXPECTED: INVALID_STATE"):
+        judge.evaluate(0)
+    _mock(direct_vm, GOOD)
+    judge.re_evaluate(0)
+    assert json.loads(judge.get_judgment(0))["round"] == 2
+
+
+def test_submit_evidence_persists_and_returns_the_stored_index(direct_vm, direct_deploy):
+    """Regression: the evidence append must reach storage, and the index must match."""
+
+    judge = _new(direct_deploy)
+    assert judge.submit_evidence(0, "first") == 0
+    assert judge.submit_evidence(0, "second") == 1
+    evidence = json.loads(judge.get_evidence(0))
+    assert len(evidence) == 2
+    assert [item["ref"] for item in evidence] == ["first", "second"]
+    assert [item["evidence_id"] for item in evidence] == ["ev0-0", "ev0-1"]
+
+
+def test_no_allowed_verdict_fails_before_a_consensus_round(direct_vm, direct_deploy):
+    """Every verdict forbidden by a failed check is an error, not a model call."""
+
+    rubric = [
+        {
+            "item_id": "hard_a",
+            "text": "Must mention alpha.",
+            "kind": "DETERMINISTIC",
+            "rule_kind": "EVIDENCE_CONTAINS",
+            "rule_value": "never-present",
+            "forbidden": ["ELIGIBLE"],
+        },
+        {
+            "item_id": "hard_b",
+            "text": "Must mention beta.",
+            "kind": "DETERMINISTIC",
+            "rule_kind": "EVIDENCE_CONTAINS",
+            "rule_value": "also-never-present",
+            "forbidden": ["INELIGIBLE"],
+        },
+    ]
+    judge = direct_deploy("contracts/verdict_judge.py")
+    judge.create_judgment("A judgment", "ELIGIBLE,INELIGIBLE", json.dumps(rubric))
+    judge.submit_evidence(0, "no relevant content")
+
+    # No mock is registered: if the contract called the model, this would not be a
+    # clean INVALID_STATE.
+    with direct_vm.expect_revert("EXPECTED: INVALID_STATE"):
+        judge.evaluate(0)
+    assert json.loads(judge.get_judgment(0))["status"] == "OPEN"

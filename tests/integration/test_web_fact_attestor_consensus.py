@@ -1,8 +1,6 @@
 import json
 
-from gltest import get_contract_factory
-
-from helpers import assert_agreed
+from helpers import assert_agreed, deploy_contract, transact_until_agreed
 
 STABLE_RULES = [
     {"name": "has_heading", "kind": "BOOL_PRESENT_HEADING", "param": "Example Domain"},
@@ -30,8 +28,8 @@ MISSING_RULES = [
 
 
 def _deploy():
-    factory = get_contract_factory(contract_file_path="web_fact_attestor.py")
-    return factory.deploy(args=[])
+    contract, _address = deploy_contract("web_fact_attestor.py")
+    return contract
 
 
 def _assert_ok(receipt):
@@ -58,22 +56,24 @@ def test_real_page_consensus_unavailable_and_challenge_round_trip():
         "purpose",
     ]
 
-    _assert_ok(contract.request_attestation(args=[0]).transact())
+    _assert_ok(transact_until_agreed(contract, "request_attestation", args=[0]))
     latest = json.loads(contract.get_latest_attestation(args=[0]).call())
     assert latest["source_status"] == "OK"
     # The live page currently has no heading; a missing heading is a fact, not a failure.
     assert latest["facts"]["has_heading"] is False
     assert latest["facts"]["mentions_documentation"] is True
     assert latest["facts"]["mentions_permission"] is True
-    assert latest["facts"]["word_bucket"] in (0, 1, 2)
+    # The bucket fact holds the raw word count; the comparator buckets it.
+    assert isinstance(latest["facts"]["word_bucket"], int)
+    assert latest["facts"]["word_bucket"] > 0
     assert latest["facts"]["purpose"] in ("DOCUMENTATION", "COMMERCE", "SOCIAL")
-    assert len(latest["snapshot_digest"]) == 8
+    assert len(latest["leader_snapshot_digest"]) == 8
     assert latest["status"] == "ACTIVE"
     assert latest["round"] == 1
 
     _assert_ok(contract.challenge_attestation(args=[0, "Re-fetch the live page."]).transact())
     assert json.loads(contract.get_latest_attestation(args=[0]).call())["status"] == "CHALLENGED"
-    _assert_ok(contract.request_attestation(args=[0]).transact())
+    _assert_ok(transact_until_agreed(contract, "request_attestation", args=[0]))
     history = json.loads(contract.get_attestations(args=[0]).call())
     assert [item["round"] for item in history] == [1, 2]
     assert history[1]["source_status"] == "OK"
@@ -86,9 +86,9 @@ def test_real_page_consensus_unavailable_and_challenge_round_trip():
             ]
         ).transact()
     )
-    _assert_ok(contract.request_attestation(args=[1]).transact())
+    _assert_ok(transact_until_agreed(contract, "request_attestation", args=[1]))
     missing = json.loads(contract.get_latest_attestation(args=[1]).call())
     assert missing["source_status"] == "UNAVAILABLE"
     assert missing["facts"] == {}
-    assert missing["snapshot_digest"] == ""
+    assert missing["leader_snapshot_digest"] == ""
     assert missing["status"] == "ACTIVE"

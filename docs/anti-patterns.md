@@ -299,3 +299,195 @@ the tolerance silently loosens.
 
 **Fixed.** A tolerance change requires a matrix update **and** a rationale in the same
 commit. See `docs/decision-guide.md` step 7 and `docs/tightness-testing.md` section 5.
+
+---
+
+## Found by audit
+
+These six were found by a security audit of the reference contracts, and each one is now
+fixed in this repository. They are listed because the shape of the mistake is reusable.
+
+### A17 — Collecting evidence and discarding it
+
+**Broken.** Validate the submitted reference, then store only an identifier:
+
+```python
+evidence_id = f"ev{id}-{len(record.evidence_ids)}"
+record.evidence_ids.append(evidence_id)      # ref is never stored
+```
+
+**Why it fails.** The model is then asked to judge something while receiving nothing but
+`ev0-0` as its data. The contract performs non-deterministic evaluation with no evidence,
+which is the failure the Intelligent Contract model exists to avoid — and the evidence
+never appears in the history either, so no auditor can tell what was weighed. The tests
+passed, because nothing asserted that the *prompt* contained the evidence.
+
+**Fixed.** Store the reference and show it to the model, bounded and labelled:
+
+```python
+record.evidence.append(EvidenceRecord(evidence_id=evidence_id, ref=ref.strip(), submitted_by=sender))
+# prompt:
+evidence_lines.append("[" + item.evidence_id + "] " + clip_text(item.ref, MAX_REF))
+```
+
+**Test.** Submit a sentinel string and make the LLM mock match **only** when the sentinel
+appears in the prompt. A successful round then proves the evidence reached the model.
+`tests/direct/test_ranking_judge.py::test_submitted_evidence_reaches_the_model_and_the_record`.
+
+---
+
+### A18 — A tolerance that can be configured to zero
+
+**Broken.** Let the caller choose the overlap threshold with no floor:
+
+```python
+if min_overlap_pct > 100:
+    _revert("EXPECTED", "INVALID_ARGUMENT")     # 0 is accepted
+```
+
+**Why it fails.** At 0 the overlap check is vacuous: `topk_overlap(["a","b","c"],
+["x","y","z"], 3, 0, None)` returns `OK`. Two completely contradictory rankings are
+"equivalent", so the contract asserts nothing while still reporting a consensus result.
+
+**Fixed.** Enforce a documented floor where the pattern is configured:
+
+```python
+if min_overlap_pct < MIN_OVERLAP_PCT or min_overlap_pct > 100:
+    _revert("EXPECTED", "INVALID_ARGUMENT")     # MIN_OVERLAP_PCT = 1
+```
+
+**Test.** `create_ranking` with `min_overlap_pct=0` must revert.
+
+---
+
+### A19 — Limits that are declared but never enforced
+
+**Broken.** Advertise a cap and never check it:
+
+```python
+MAX_ROUND = 8
+...
+"max_round": MAX_ROUND,          # reported by get_config()
+...
+record.ranking_history.append(...)   # no cap check anywhere
+```
+
+**Why it fails.** The state grows without bound, and — worse — the contract *lies* about its
+own limits. An operator reading `get_config()` believes a cap exists.
+
+**Fixed.** Check the cap where the state grows, and make `get_config()` report only limits
+that are actually enforced.
+
+**Test.** Drive the rounds to the cap and assert the next one reverts `OVER_LIMIT`, and
+that the advertised number equals the enforced one.
+
+---
+
+### A20 — An unrestricted URL for a contract that fetches it
+
+**Broken.** Accept any scheme and any host:
+
+```python
+if scheme not in ("http", "https") or not rest:
+    _revert("EXPECTED", "INVALID_ARGUMENT")
+```
+
+**Why it fails.** Two problems. (a) Plain http: an on-path attacker serves identical bytes
+to every validator, they all agree, and the attestation records a confidently false fact.
+(b) Any host: the spec creator aims every validator at `127.0.0.1`, `10.0.0.0/8`, or
+`169.254.169.254` — the last being cloud instance metadata — and the extracted result is
+published on chain.
+
+**Fixed.** Require HTTPS and reject literal loopback, link-local, and private hosts. The
+check is literal because GenVM has no DNS resolution, and resolving would itself be a
+non-deterministic operation.
+
+**Test.** `create_spec` must reject `http://…`, `https://127.0.0.1/…`,
+`https://169.254.169.254/…`, `https://10.0.0.1/…`, `https://localhost/…`.
+
+---
+
+### A21 — A digest that overstates what it proves
+
+**Broken.** Store the leader's page digest under a name that implies agreement:
+
+```python
+"snapshot_digest": digest_hex(page)     # leader's own bytes, nobody checked
+```
+
+**Why it fails.** Each validator fetches independently and may see different bytes; only the
+leader's value is kept. A reader who sees `snapshot_digest` concludes the attestation pins
+specific page content. It does not — and the digest is FNV-1a, so it is not tamper-evident
+either.
+
+**Fixed.** Name it for what it is and say so in the field, the docstring, and the docs:
+
+```python
+leader_snapshot_digest: str   # the leader's own fingerprint; never compared
+```
+
+---
+
+### A22 — A griefable, unattributable round
+
+**Broken.** Let anyone open the next round of a bounded series:
+
+```python
+@gl.public.write
+def request_attestation(self, spec_id: u32) -> u32:   # no sender check
+    ...
+    if latest.status != STATUS_CHALLENGED and latest.source_status != SOURCE_UNAVAILABLE:
+        _revert("EXPECTED", "INVALID_STATE")
+```
+
+**Why it fails.** After a challenge, any address can open the next round, which is then
+recorded under *their* address. Repeating this exhausts the spec's round budget and stops
+the legitimate record from advancing.
+
+**Fixed.** Attribute the round: only the spec creator or the previous requester may open it.
+
+**Test.** A third party must get `EXPECTED: NOT_AUTHORIZED`; the creator must succeed.
+
+---
+
+### A23 — Feeding a human-facing field into a strict schema check
+
+**Broken.** The pattern comparator takes exactly the fields it compares, and the contract
+hands it everything the model returned:
+
+```python
+left  = {"ranking": [...], "digest": "b is best"}
+right = {"ranking": [...], "digest": "a different explanation"}
+compare_p4(left, right, context)      # -> UNEXPECTED_FIELD
+```
+
+**Why it fails.** `compare_p4` validates its input against the P4 field set, `("ranking",)`,
+because an unexpected field usually means the model returned a different shape than the one
+the rule was written for. `digest` is deliberately *outside* that set — it is a human-facing
+explanation and is never compared. So the schema check fails **before** the overlap rule is
+evaluated, every validator disagrees, and the transaction can never finalize.
+
+What makes this one dangerous is how it hides: direct tests execute the **leader** by
+default, so the contract's own test suite saw a successful ranking round and reported green.
+Only a real consensus round — where validators actually run — exposed it.
+
+**Fixed.** Strip the non-compared field at the call site, so the exclusion is explicit:
+
+```python
+result = compare_p4(
+    {"ranking": left["ranking"]},
+    {"ranking": right["ranking"]},
+    context,
+)
+```
+
+**Test.** A validated-directly test that exercises the *validator*, not just the leader:
+`tests/direct/test_ranking_judge.py::test_validator_accepts_honest_ranking_and_rejects_bad_ones`
+asserts an honest ranking with a **different digest** is accepted, and that a decision flip,
+an invented candidate, and a malformed shape are all rejected. Compare
+`tests/direct/test_web_fact_attestor.py`, which strips the digest before `compare_p2` for the
+same reason.
+
+**The general rule.** Every caller that compares via a pattern comparator must pass exactly
+the pattern's compared fields. If a field is not compared, strip it at the call site — never
+widen the pattern's schema to accommodate it.

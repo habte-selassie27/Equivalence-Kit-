@@ -100,7 +100,50 @@ every pattern. A single miss is a defect, not a tuning knob.
 | Harmful rejection < 100% | Rule is **too loose** | Validators would agree on garbage. Tighten the rule; do not touch the matrix to make it pass. |
 | Both 100% but a real run disagrees | The perturbations do not model reality | Add a perturbation that reproduces the real disagreement. |
 
-## 5. Rules
+## 5. Real runs: a live model is not unanimous
+
+The matrix and the perturbation harness measure the rule. They cannot measure the *model*.
+Real consensus runs add a second, separate source of disagreement, and it is worth naming
+precisely.
+
+**What was observed on StudioNet (2026-10-22).** Both of these happened with the rules
+unchanged, and both are the rules working correctly:
+
+- A P1 round where one validator returned `ELIGIBLE` and another `INELIGIBLE`. P1 compares
+  the verdict exactly, so the round was refused, the state was left unchanged, and the
+  caller could try again.
+- A P4 round where two validators' top-2 sets shared only one candidate. With top-k 2 over
+  three candidates and a 66 percent threshold, that is 50 percent and the round was refused.
+
+**What it means.** A rule that no honest run can satisfy is a rule that never finalizes.
+The P4 parameters in the first case — top-k 2 over three candidates, threshold 66 — demand
+that two independent runs pick the *same pair* in the same order. That is not a tolerance
+band, it is a demand for identical output, and it fails against a live model.
+
+**What to do about it — in this order.**
+
+1. **Fix the rubric first.** The P1 failure was a rubric that left both verdicts plausible
+   ("assess whether the evidence is sufficient"). Stating the decision rule outright in the
+   rubric removed the ambiguity. A vague rubric is the most common cause of a P1 refusal.
+2. **Then check the parameters.** The P4 failure was a threshold no honest run could meet.
+   Top-k 2 over four candidates with a 50 percent threshold asks the top-2 to share at least
+   one candidate, which a model can actually do.
+3. **Only then retry.** A refused round leaves the state unchanged, so the caller may try
+   again — but a retry is a symptom, not a fix. Two failures in a row means the rule or the
+   rubric is wrong.
+
+**Do not** loosen a rule until a live run agrees. That is A16 in
+`docs/anti-patterns.md`: it converts a real defect into a documented "feature", and the
+tolerance silently drifts.
+
+**In the test suite**, a live-network test may retry inside the contract's own semantics
+(`tests/helpers.py::transact_until_agreed`) so that a single unlucky draw does not fail the
+run. Each attempt is bounded to one rotation: a refusal under the network's default rotation
+count can spend many minutes re-running the model before it gives up, which turns a refused
+round into a hung test. The retry never changes the rule, and the final failure still raises
+with the last receipt, so a genuine regression is not masked.
+
+## 6. Rules
 
 - **Never weaken a matrix to make a test pass.** If a case fails, the rule is wrong (or the
   case is documenting a real bug). Investigate, then change one of them deliberately.
@@ -109,7 +152,7 @@ every pattern. A single miss is a defect, not a tuning knob.
 - Keep the perturbation generators deterministic (seeded `random.Random`), so a failure
   reproduces exactly.
 
-## 6. What this cannot prove
+## 7. What this cannot prove
 
 Tightness testing proves the rule behaves as specified on the cases you generate. It cannot
 prove that the specification itself is correct, and it cannot catch a wrong answer that

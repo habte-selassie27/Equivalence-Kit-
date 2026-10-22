@@ -1,8 +1,6 @@
 import json
 
-from gltest import get_contract_factory
-
-from helpers import assert_agreed
+from helpers import assert_agreed, deploy_contract, transact_until_agreed
 
 DETERMINISTIC_ONLY = [
     {
@@ -26,7 +24,14 @@ LLM_RUBRIC = [
     },
     {
         "item_id": "quality",
-        "text": "Assess whether the evidence is sufficient and relevant.",
+        # The rubric states the decision rule outright. A vague rubric leaves two verdicts
+        # plausible, and P1 compares the verdict exactly: two honest validators that read
+        # it differently then refuse the round. That is the rule working, but it is not a
+        # rubric worth deploying.
+        "text": (
+            "The evidence is sufficient when it states a verified income figure. "
+            "In that case the verdict is ELIGIBLE; otherwise it is INELIGIBLE."
+        ),
         "kind": "INTERPRETIVE",
         "rule_kind": "NONE",
     },
@@ -34,8 +39,8 @@ LLM_RUBRIC = [
 
 
 def _deploy():
-    factory = get_contract_factory(contract_file_path="verdict_judge.py")
-    return factory.deploy(args=[])
+    contract, _address = deploy_contract("verdict_judge.py")
+    return contract
 
 
 def _assert_ok(receipt):
@@ -73,7 +78,9 @@ def test_llm_consensus_challenge_and_re_evaluation():
         ).transact()
     )
     _assert_ok(contract.submit_evidence(args=[0, "income is 5000 per year and verified."]).transact())
-    _assert_ok(contract.evaluate(args=[0]).transact())
+    # A live model is not unanimous; the rule refuses a round the validators disagree on
+    # and leaves the state unchanged, so the caller may try again.
+    _assert_ok(transact_until_agreed(contract, "evaluate", args=[0]))
 
     first = json.loads(contract.get_assessments(args=[0]).call())
     assert len(first) == 1
@@ -81,7 +88,7 @@ def test_llm_consensus_challenge_and_re_evaluation():
     assert first[0]["band"] in ("LOW", "MEDIUM", "HIGH")
 
     _assert_ok(contract.challenge(args=[0, "Please re-check the evidence."]).transact())
-    _assert_ok(contract.re_evaluate(args=[0]).transact())
+    _assert_ok(transact_until_agreed(contract, "re_evaluate", args=[0]))
 
     assessments = json.loads(contract.get_assessments(args=[0]).call())
     assert [item["round"] for item in assessments] == [1, 2]

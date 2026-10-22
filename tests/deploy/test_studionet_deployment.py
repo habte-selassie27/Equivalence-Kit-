@@ -24,7 +24,7 @@ from pathlib import Path
 from gltest import get_contract_factory
 from gltest_cli.config.general import get_general_config
 
-from helpers import assert_agreed, votes
+from helpers import assert_agreed, build_contract, transact_until_agreed, votes
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 OUTPUT = ROOT / "deployments" / "studionet.md"
@@ -56,6 +56,29 @@ FACT_RULES = [
     },
     {"name": "word_bucket", "kind": "BUCKET_WORD_COUNT", "edges": [10, 100]},
 ]
+
+RANKING_RUBRIC = [
+    {
+        "item_id": "relevance",
+        "text": "Rank by how directly the evidence answers the question.",
+        "kind": "INTERPRETIVE",
+        "rule_kind": "NONE",
+    },
+    {
+        "item_id": "freshness",
+        "text": "Prefer the more recent evidence.",
+        "kind": "INTERPRETIVE",
+        "rule_kind": "NONE",
+    },
+]
+
+RANKING_EVIDENCE = (
+    "Question: which vendors have the better uptime record? "
+    "Acme reports 99.95 percent uptime for the last year. "
+    "Globex reports 99.1 percent uptime for the last year. "
+    "Initech reports 99.5 percent uptime but only over the last month. "
+    "Umbrella reports no uptime figures at all."
+)
 
 
 def _rpc() -> str:
@@ -144,7 +167,7 @@ def test_deploy_reference_contracts_to_studionet():
     deploy_receipt = factory.deploy_contract_tx(args=[])
     judge_address = deploy_receipt["data"]["contract_address"]
 
-    judge = factory.build_contract(contract_address=judge_address)
+    judge = build_contract(judge_address)
     config_read = judge.get_config(args=[]).call()
 
     create_receipt = judge.create_judgment(
@@ -161,8 +184,7 @@ def test_deploy_reference_contracts_to_studionet():
 
     # The rubric's deterministic item passes, so the model is consulted and the whole
     # round runs through real LLM consensus.
-    evaluate_receipt = judge.evaluate(args=[0]).transact()
-    assert_agreed(evaluate_receipt)
+    evaluate_receipt = transact_until_agreed(judge, "evaluate", args=[0])
 
     assessments_read = judge.get_assessments(args=[0]).call()
     judgment_after = judge.get_judgment(args=[0]).call()
@@ -221,7 +243,7 @@ def test_deploy_reference_contracts_to_studionet():
     attestor_receipt = attestor_factory.deploy_contract_tx(args=[])
     attestor_address = attestor_receipt["data"]["contract_address"]
 
-    attestor = attestor_factory.build_contract(contract_address=attestor_address)
+    attestor = build_contract(attestor_address)
     attestor_config = attestor.get_config(args=[]).call()
 
     spec_receipt = attestor.create_spec(
@@ -232,8 +254,7 @@ def test_deploy_reference_contracts_to_studionet():
     spec_read = attestor.get_spec(args=[0]).call()
 
     # Live web fetch plus a real model-backed fact, under real consensus.
-    attest_receipt = attestor.request_attestation(args=[0]).transact()
-    assert_agreed(attest_receipt)
+    attest_receipt = transact_until_agreed(attestor, "request_attestation", args=[0])
 
     latest_read = attestor.get_latest_attestation(args=[0]).call()
     attestations_read = attestor.get_attestations(args=[0]).call()
@@ -279,6 +300,89 @@ def test_deploy_reference_contracts_to_studionet():
             ),
         ],
         _schema(attestor_address),
+    )
+
+    # ------------------------------------------------------------- RankingJudge
+    ranker_factory = get_contract_factory(contract_file_path="ranking_judge.py")
+    ranker_receipt = ranker_factory.deploy_contract_tx(args=[])
+    ranker_address = ranker_receipt["data"]["contract_address"]
+
+    ranker = build_contract(ranker_address)
+    ranker_config = ranker.get_config(args=[]).call()
+
+    create_ranking_receipt = ranker.create_ranking(
+        args=[
+            "Vendor ranking",
+            "acme,globex,initech,umbrella",
+            json.dumps(RANKING_RUBRIC),
+            2,
+            50,
+            1,
+        ]
+    ).transact()
+    assert_agreed(create_ranking_receipt)
+
+    ranker_evidence_receipt = ranker.submit_evidence(
+        args=[0, RANKING_EVIDENCE]
+    ).transact()
+    assert_agreed(ranker_evidence_receipt)
+
+    ranker_evidence_read = ranker.get_evidence(args=[0]).call()
+
+    # A real LLM consensus round over the P4 rule.
+    rank_receipt = transact_until_agreed(ranker, "rank", args=[0])
+
+    ranker_read = ranker.get_ranking(args=[0]).call()
+    ranker_history = ranker.get_rankings(args=[0]).call()
+
+    _record(
+        lines,
+        "RankingJudge",
+        "contracts/ranking_judge.py",
+        ranker_address,
+        _tx(ranker_receipt),
+        ranker_receipt,
+        [
+            (
+                "First read call — `get_config`",
+                "```json\n" + str(ranker_config) + "\n```",
+                None,
+            ),
+            (
+                "First write — `create_ranking`",
+                "Freezes the candidate universe, the rubric, and the P4 parameters "
+                "(top_k 2, overlap 66 percent, rank distance cap 1).",
+                create_ranking_receipt,
+            ),
+            (
+                "Write — `submit_evidence`",
+                "Appends one evidence reference. The reference text is stored and shown to "
+                "the model.",
+                ranker_evidence_receipt,
+            ),
+            (
+                "Read back — `get_evidence(0)`",
+                "```json\n" + str(ranker_evidence_read) + "\n```",
+                None,
+            ),
+            (
+                "Write — `rank`",
+                "A real LLM consensus round over the P4 rule: candidate universe check "
+                "plus top-k overlap and the rank-distance cap.",
+                rank_receipt,
+            ),
+            (
+                "Read back — `get_ranking(0)`",
+                "```json\n" + str(ranker_read) + "\n```",
+                None,
+            ),
+            (
+                "Read back — `get_rankings(0)`",
+                "```json\n" + str(ranker_history) + "\n```",
+                None,
+            ),
+        ],
+        _schema(ranker_address),
     )
 
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)

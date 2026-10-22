@@ -82,6 +82,13 @@ python3.12 tools/tightness.py
 It reports, per pattern, the case counts and the harmless-accept / harmful-reject rates.
 Both must be 100%.
 
+**When a real run is refused.** A live model is not unanimous: two validators can read the
+same borderline rubric differently, and a rule that compares a decision exactly then refuses
+the round. That refusal is the rule working. The order of repairs is: fix an ambiguous
+rubric first, then check that the tolerance band is one an honest run can actually meet, and
+only then retry — a retry is a symptom, not a fix. See
+[`docs/tightness-testing.md` section 5](tightness-testing.md#5-real-runs-a-live-model-is-not-unanimous).
+
 ## 8. How will you prove it?
 
 Write the acceptance matrix **before** the contract. Three categories, every time:
