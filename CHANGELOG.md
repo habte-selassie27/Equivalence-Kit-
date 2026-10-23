@@ -289,3 +289,10 @@ running. See `tests/helpers.py::deploy_contract`.
   canonical.json is present) perturbation generators, prints the tightness report.
 - `tests/site/test_site_data.py`: wraps `export_site_data.py --check` as a pytest test.
 - `.github/workflows/pages.yml`: builds and deploys the playground to GitHub Pages.
+
+## 2026-10-23 — pass 19 (Pattern Builder playground screen)
+
+- New `/builder` route: compose a canonical output and context, run the real primitives in
+  the browser (identity case, 10 harmless + 10 harmful perturbations), see the rates, and
+  export the spec JSON and a contract skeleton.
+- App.tsx: nav link + route wired; typecheck clean; 74 tests still pass; build succeeds.

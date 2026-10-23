@@ -8,6 +8,7 @@ import { PatternsScreen } from "../screens/Patterns/PatternsScreen";
 import { PlaygroundScreen } from "../screens/Playground/PlaygroundScreen";
 import { TightnessScreen } from "../screens/Tightness/TightnessScreen";
 import { DecisionGuideScreen } from "../screens/DecisionGuide/DecisionGuideScreen";
+import { BuilderScreen } from "../screens/Builder/BuilderScreen";
 
 /** The official Equivalence Principle page. Linked from the footer per UI.md 6. */
 const EQUIVALENCE_DOCS_URL =
@@ -88,6 +89,7 @@ export function App() {
             <NavLink to="/">Patterns</NavLink>
             <NavLink to="/playground">Playground</NavLink>
             <NavLink to="/tightness">Tightness</NavLink>
+            <NavLink to="/builder">Builder</NavLink>
             <NavLink to="/guide">Decision guide</NavLink>
           </nav>
           <div className="header-controls">
@@ -102,6 +104,7 @@ export function App() {
           <Route path="/" element={<PatternsScreen />} />
           <Route path="/playground" element={<PlaygroundScreen />} />
           <Route path="/tightness" element={<TightnessScreen />} />
+          <Route path="/builder" element={<BuilderScreen />} />
           <Route path="/guide" element={<DecisionGuideScreen />} />
           <Route
             path="*"
