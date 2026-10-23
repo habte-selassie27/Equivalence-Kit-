@@ -15,8 +15,10 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 def test_site_data_is_up_to_date():
+    # Pinned interpreter on purpose: tool output is interpreter-sensitive and the
+    # vendoring/export gates must not vary with an ambient `python3`.
     result = subprocess.run(
-        [sys.executable, str(ROOT / "tools" / "export_site_data.py"), "--check"],
+        ["/usr/bin/python3.12", str(ROOT / "tools" / "export_site_data.py"), "--check"],
         cwd=ROOT,
         capture_output=True,
         text=True,

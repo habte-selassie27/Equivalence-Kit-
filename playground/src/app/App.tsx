@@ -4,11 +4,13 @@ import { packageVersion } from "../data/load";
 import { engine, type EngineStatus } from "../worker/engine";
 import { applyTheme, getThemeSetting, nextThemeSetting, subscribeSystemTheme, type ThemeSetting } from "../lib/theme";
 import { ThemeToggle } from "../components/ThemeToggle";
+import { HomeScreen } from "../screens/Home/HomeScreen";
 import { PatternsScreen } from "../screens/Patterns/PatternsScreen";
 import { PlaygroundScreen } from "../screens/Playground/PlaygroundScreen";
 import { TightnessScreen } from "../screens/Tightness/TightnessScreen";
 import { DecisionGuideScreen } from "../screens/DecisionGuide/DecisionGuideScreen";
 import { BuilderScreen } from "../screens/Builder/BuilderScreen";
+import { DevelopersGuideScreen } from "../screens/DevelopersGuide/DevelopersGuideScreen";
 
 /** The official Equivalence Principle page. Linked from the footer per UI.md 6. */
 const EQUIVALENCE_DOCS_URL =
@@ -86,11 +88,12 @@ export function App() {
             <small>Optional companion — not part of the contract submission</small>
           </NavLink>
           <nav className="nav" aria-label="Primary">
-            <NavLink to="/">Patterns</NavLink>
+            <NavLink to="/patterns">Patterns</NavLink>
             <NavLink to="/playground">Playground</NavLink>
             <NavLink to="/tightness">Tightness</NavLink>
             <NavLink to="/builder">Builder</NavLink>
             <NavLink to="/guide">Decision guide</NavLink>
+            <NavLink to="/developing">Developer's guide</NavLink>
           </nav>
           <div className="header-controls">
             <ThemeToggle setting={themeSetting} onCycle={cycleTheme} />
@@ -101,11 +104,13 @@ export function App() {
 
       <main id="main" className="app-main">
         <Routes>
-          <Route path="/" element={<PatternsScreen />} />
+          <Route path="/" element={<HomeScreen />} />
+          <Route path="/patterns" element={<PatternsScreen />} />
           <Route path="/playground" element={<PlaygroundScreen />} />
           <Route path="/tightness" element={<TightnessScreen />} />
           <Route path="/builder" element={<BuilderScreen />} />
           <Route path="/guide" element={<DecisionGuideScreen />} />
+          <Route path="/developing" element={<DevelopersGuideScreen />} />
           <Route
             path="*"
             element={

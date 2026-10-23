@@ -1,10 +1,12 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it } from "vitest";
+import { HomeScreen } from "./Home/HomeScreen";
 import { TightnessScreen } from "./Tightness/TightnessScreen";
 import { DecisionGuideScreen } from "./DecisionGuide/DecisionGuideScreen";
 import { PatternsScreen } from "./Patterns/PatternsScreen";
 import { PlaygroundScreen } from "./Playground/PlaygroundScreen";
+import { DevelopersGuideScreen } from "./DevelopersGuide/DevelopersGuideScreen";
 
 function renderScreen(node: React.ReactElement, route = "/") {
   return render(<MemoryRouter initialEntries={[route]}>{node}</MemoryRouter>);
@@ -219,5 +221,55 @@ describe("Playground screen", () => {
         /These rules show how validators agree. They do not check whether content is true/,
       ).length,
     ).toBeGreaterThan(0);
+  });
+});
+
+describe("Home screen", () => {
+  it("leads with the problem and the six patterns as links", () => {
+    renderScreen(<HomeScreen />);
+    expect(
+      screen.getByText(/deciding what validators must agree on/),
+    ).toBeInTheDocument();
+    for (const id of ["P1", "P2", "P3", "P4", "P5", "P6"]) {
+      expect(screen.getAllByText(id).length).toBeGreaterThan(0);
+    }
+  });
+
+  it("renders tightness numbers from the generated data, not literals", () => {
+    renderScreen(<HomeScreen />);
+    expect(
+      screen.getByText(/60\/60 harmless variations accepted/),
+    ).toBeInTheDocument();
+  });
+
+  it("links into the playground and the developer's guide", () => {
+    const { container } = renderScreen(<HomeScreen />);
+    const hrefs = container.querySelectorAll("a[href]");
+    const targets = Array.from(hrefs).map((a) => a.getAttribute("href"));
+    expect(targets).toContain("/guide");
+    expect(targets).toContain("/developing");
+    expect(targets).toContain("/playground");
+    expect(targets).toContain("/patterns?pattern=P1");
+  });
+});
+
+describe("Developer's guide screen", () => {
+  it("documents the shipped CLI commands", () => {
+    renderScreen(<DevelopersGuideScreen />);
+    expect(screen.getByText(/ekit --version/)).toBeInTheDocument();
+    expect(screen.getByText(/ekit audit contracts --json/)).toBeInTheDocument();
+    expect(screen.getByText(/python3\.12 tools\/vendor\.py --check/)).toBeInTheDocument();
+  });
+
+  it("states the vendoring reason and the pinned interpreter", () => {
+    const { container } = renderScreen(<DevelopersGuideScreen />);
+    expect(container.textContent).toMatch(/cannot import a sibling module/);
+    expect(container.textContent).toMatch(/usr\/bin\/python3\.12|Python 3\.12/);
+  });
+
+  it("walks the contract-recipe in order", () => {
+    renderScreen(<DevelopersGuideScreen />);
+    expect(screen.getByText(/1 · Install from the source tree/)).toBeInTheDocument();
+    expect(screen.getByText(/6 · Verify before you ship/)).toBeInTheDocument();
   });
 });

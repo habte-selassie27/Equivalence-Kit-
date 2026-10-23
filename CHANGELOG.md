@@ -290,6 +290,24 @@ running. See `tests/helpers.py::deploy_contract`.
 - `tests/site/test_site_data.py`: wraps `export_site_data.py --check` as a pytest test.
 - `.github/workflows/pages.yml`: builds and deploys the playground to GitHub Pages.
 
+## 2026-10-23 — pass 19 (home + developer's guide screens, site-gate consolidation)
+
+- Added `HomeScreen` at `/`: problem statement, kit contents (primitives, three reference
+  contracts, `ekit` tooling), the six patterns with links into their specs, a computed
+  tightness figures line, and the documented cannot-do limits. All numbers come from the
+  generated site data; no literals.
+- Added `DevelopersGuideScreen` at `/developing`: install, pattern choice, primitive
+  usage, contract-recipe walk-through (reference contracts linked), vendoring with the
+  pinned-interpreter rationale, and the verification-gate command list. Every command
+  mirrors shipped code (`audit`/`scaffold`/`matrix` CLI, `tools/vendor.py`, lint/test
+  gates).
+- Navigation rework: Patterns moved from `/` to `/patterns`; the brand links home;
+  nav gains "Developer's guide". Builder routes (in-flight lane) untouched.
+- Screen tests added (6; playground suite now 80) and `tests/site` consolidated to one
+  staleness gate (`test_site_data.py`) pinned to `/usr/bin/python3.12`; the duplicate
+  `test_export_is_fresh.py` from pass 16 is removed.
+
+
 ## 2026-10-23 — pass 19 (Pattern Builder playground screen)
 
 - New `/builder` route: compose a canonical output and context, run the real primitives in
