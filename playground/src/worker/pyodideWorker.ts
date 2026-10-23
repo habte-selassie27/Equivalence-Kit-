@@ -165,21 +165,24 @@ function lastMeaningfulLine(text: string): string {
  */
 function buildPython(request: Request): string {
   const json = (value: unknown) => JSON.stringify(value ?? null);
+  // A Python string literal for a value: stringify twice so the outer layer carries
+  // quotes and escaping. Used wherever a value is handed to json.loads in Python.
+  const pystr = (value: unknown) => JSON.stringify(JSON.stringify(value ?? null));
 
   switch (request.kind) {
     case "compare":
       return `
 import json as _json
-_leader = _json.loads(${json(request.leader)})
-_validator = _json.loads(${json(request.validator)})
-_context = _json.loads(${json(request.context)})
+_leader = _json.loads(${pystr(request.leader)})
+_validator = _json.loads(${pystr(request.validator)})
+_context = _json.loads(${pystr(request.context)})
 _result = compare_pattern(${json(request.patternId)}, _leader, _validator, _context)
 _json.dumps(_result)
 `;
     case "perturb":
       return `
 import json as _json
-_leader = _json.loads(${json(request.leader)})
+_leader = _json.loads(${pystr(request.leader)})
 _fn = harmless_variation if ${json(request.mode)} == "harmless" else harmful_variation
 _variant = _fn(${json(request.patternId)}, _leader, ${Number(request.seed) | 0})
 _json.dumps(_variant)
@@ -187,7 +190,7 @@ _json.dumps(_variant)
     case "normalize":
       return `
 import json as _json
-_value = _json.loads(${json(request.value)})
+_value = _json.loads(${pystr(request.value)})
 _fn = globals().get(${json(request.fn)})
 if _fn is None:
     raise ValueError("unknown normalizer")
