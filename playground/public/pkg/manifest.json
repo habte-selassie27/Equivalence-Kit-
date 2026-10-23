@@ -10,9 +10,11 @@
     "compare.py",
     "digest.py",
     "errors.py",
+    "matrix_runner.py",
     "normalize.py",
     "parsing.py",
     "patterns.py",
-    "perturb.py"
+    "perturb.py",
+    "scaffold.py"
   ]
 }

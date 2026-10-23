@@ -127,4 +127,4 @@ Verification: 265 local tests pass; vendor fresh; tightness 60/60; site data up 
 
 Pass 19 complete: Pattern Builder playground screen (new /builder route) added.
 Project is submission-ready on StudioNet. M10 (testnet) is explicitly out of scope
-(StudioNet only).
+(StudioNet only). Pattern Builder screen added (pass 19). Pyodide worker JSON codegen fixed.
