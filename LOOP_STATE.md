@@ -86,10 +86,14 @@ $ python3.12 -m pytest tests/integration tests/deploy -v -s --network studionet
 
 ## Open gaps
 
-1. M10 testnet deployment (Bradbury/Asimov) — hard stop, needs funded account at the faucet.
+1. M10 testnet deployment (Bradbury/Asimov) — **declined by user**; StudioNet only.
    StudioNet has been re-deployed under the user's own wallet
    (`0x5B3661C576c7001e6d6279C67F3779705d334c89`); those addresses are in
-   `deployments/studionet.md`.
+   `deployments/studionet.md`. StudioNet satisfies the public-network evidence
+   requirement of the submission checklist.
+2. M-UI-8 hosting — manual static-host deploy of `playground/dist/` (optional).
+3. Optional CLI follow-ups: `ekit scaffold`, `ekit matrix`; Pattern Builder playground screen.
+4. Optional: wrap `export_site_data.py --check` as a pytest test (`tests/site/`).
 2. M-UI-8 hosting — manual deploy to any static host.
 3. The local GenLayer node (jsonrpc + postgres) is down because the host already occupies
    :5432. The StudioNet tests no longer need it: they fetch the schema of the deployed
@@ -121,6 +125,6 @@ Verification: 265 local tests pass; vendor fresh; tightness 60/60; site data up 
 
 ## Next step
 
-Pass 16: `ekit scaffold` (pattern → vendored contract + matrix test) and `ekit matrix`
-(acceptance matrix + perturbation runner on a custom spec). Then the Pattern Builder
-screen in the playground. M10 testnet deploy remains blocked on a funded account.
+Project is submission-ready on StudioNet. Remaining work is optional:
+`ekit scaffold`, `ekit matrix`, Pattern Builder playground screen, hosted playground.
+M10 (testnet) is explicitly out of scope (StudioNet only).
