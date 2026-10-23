@@ -120,9 +120,9 @@ is in [`deployments/studionet.md`](deployments/studionet.md).
 
 | Contract | Address | Explorer |
 |---|---|---|
-| VerdictJudge | `0x252068B9Cd0399cE5516fC8A2a04dE088FD45Ec7` | [view](https://explorer-studio.genlayer.com/address/0x252068B9Cd0399cE5516fC8A2a04dE088FD45Ec7) |
-| WebFactAttestor | `0xAAeBb09e01544e853C8ED91Ad824c0a496a6DC59` | [view](https://explorer-studio.genlayer.com/address/0xAAeBb09e01544e853C8ED91Ad824c0a496a6DC59) |
-| RankingJudge | `0x1D84b33Cab5e2a70fBFe43ACed9bF16DE63d45a0` | [view](https://explorer-studio.genlayer.com/address/0x1D84b33Cab5e2a70fBFe43ACed9bF16DE63d45a0) |
+| VerdictJudge | `0xC4B6E69EC35A9114b43397F6bB59541bC8c5e94B` | [view](https://explorer-studio.genlayer.com/address/0xC4B6E69EC35A9114b43397F6bB59541bC8c5e94B) |
+| WebFactAttestor | `0x6E720e9d701B542f0f77F52A4cD1b155225ad0FF` | [view](https://explorer-studio.genlayer.com/address/0x6E720e9d701B542f0f77F52A4cD1b155225ad0FF) |
+| RankingJudge | `0x6dc5764eE90dB65E7b102a0e78E7983deD92b717` | [view](https://explorer-studio.genlayer.com/address/0x6dc5764eE90dB65E7b102a0e78E7983deD92b717) |
 
 The deployed contracts were exercised end to end: a VerdictJudge evaluation reached
 agreement on a real LLM round, a WebFactAttestor attestation fetched the live `example.com`
@@ -196,9 +196,9 @@ record — addresses, transaction hashes, saved schemas, and per-step validator 
 
 | Contract | Address | Explorer |
 |---|---|---|
-| VerdictJudge | `0x252068B9Cd0399cE5516fC8A2a04dE088FD45Ec7` | [view](https://explorer-studio.genlayer.com/address/0x252068B9Cd0399cE5516fC8A2a04dE088FD45Ec7) |
-| WebFactAttestor | `0xAAeBb09e01544e853C8ED91Ad824c0a496a6DC59` | [view](https://explorer-studio.genlayer.com/address/0xAAeBb09e01544e853C8ED91Ad824c0a496a6DC59) |
-| RankingJudge | `0x1D84b33Cab5e2a70fBFe43ACed9bF16DE63d45a0` | [view](https://explorer-studio.genlayer.com/address/0x1D84b33Cab5e2a70fBFe43ACed9bF16DE63d45a0) |
+| VerdictJudge | `0xC4B6E69EC35A9114b43397F6bB59541bC8c5e94B` | [view](https://explorer-studio.genlayer.com/address/0xC4B6E69EC35A9114b43397F6bB59541bC8c5e94B) |
+| WebFactAttestor | `0x6E720e9d701B542f0f77F52A4cD1b155225ad0FF` | [view](https://explorer-studio.genlayer.com/address/0x6E720e9d701B542f0f77F52A4cD1b155225ad0FF) |
+| RankingJudge | `0x6dc5764eE90dB65E7b102a0e78E7983deD92b717` | [view](https://explorer-studio.genlayer.com/address/0x6dc5764eE90dB65E7b102a0e78E7983deD92b717) |
 
 A VerdictJudge evaluation reached agreement on a real LLM round with the digest stored but
 never compared. A WebFactAttestor attestation fetched the live `example.com` page under P2

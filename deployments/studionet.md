@@ -14,12 +14,12 @@ hand-edit.
 | Field | Value |
 |---|---|
 | Contract file | `contracts/verdict_judge.py` |
-| Address | `0x252068B9Cd0399cE5516fC8A2a04dE088FD45Ec7` |
-| Deploy tx | `0x775a03df8b2969107d9c34d323389d12f01d342552c28e31720b7c3eeb6b3c89` |
-| Explorer (address) | https://explorer-studio.genlayer.com/address/0x252068B9Cd0399cE5516fC8A2a04dE088FD45Ec7 |
-| Explorer (deploy tx) | https://explorer-studio.genlayer.com/tx/0x775a03df8b2969107d9c34d323389d12f01d342552c28e31720b7c3eeb6b3c89 |
+| Address | `0xC4B6E69EC35A9114b43397F6bB59541bC8c5e94B` |
+| Deploy tx | `0x90fe91e6459fe5d5b9b5f4fb29b135b0d0bc0946759108ad81f6e67c54c30596` |
+| Explorer (address) | https://explorer-studio.genlayer.com/address/0xC4B6E69EC35A9114b43397F6bB59541bC8c5e94B |
+| Explorer (deploy tx) | https://explorer-studio.genlayer.com/tx/0x90fe91e6459fe5d5b9b5f4fb29b135b0d0bc0946759108ad81f6e67c54c30596 |
 
-Deploy votes: `agree`, `agree`, `idle`, `agree`, `idle`
+Deploy votes: `idle`, `agree`, `agree`, `idle`, `agree`
 
 #### First read call — `get_config`
 
@@ -31,42 +31,42 @@ Deploy votes: `agree`, `agree`, `idle`, `agree`, `idle`
 
 Freezes the verdict set and a two-item rubric (one deterministic, one interpretive).
 
-- tx: `0x7ac81938831fe08b0f21e242415db473974981a11e92294916769e0049969954`
-- explorer: https://explorer-studio.genlayer.com/tx/0x7ac81938831fe08b0f21e242415db473974981a11e92294916769e0049969954
-- votes: `idle`, `agree`, `agree`, `agree`, `idle`
+- tx: `0xc8757b4bcc378bd540e815a30a8393ae0f6073bbd3b23bb9b1b18629e6bc1f38`
+- explorer: https://explorer-studio.genlayer.com/tx/0xc8757b4bcc378bd540e815a30a8393ae0f6073bbd3b23bb9b1b18629e6bc1f38
+- votes: `agree`, `agree`, `agree`, `agree`, `agree`
 
 #### Read back — `get_judgment(0)`
 
 ```json
-{"assessments": [], "challenge_reason": "", "creator": "0x9B368fa9eF3D932F72eC75F5842f2A5F03920eDC", "evidence": [], "judgment_id": 0, "round": 0, "rubric": [{"item_id": "hard_income", "kind": "DETERMINISTIC", "rule_count": 0, "rule_kind": "EVIDENCE_CONTAINS", "rule_value": "income", "text": "Evidence must mention income."}, {"item_id": "quality", "kind": "INTERPRETIVE", "rule_count": 0, "rule_kind": "NONE", "rule_value": "", "text": "Assess whether the evidence is sufficient and relevant."}], "rules": {"hard_income": ["ELIGIBLE"]}, "status": "OPEN", "title": "Income eligibility", "verdict_set": ["ELIGIBLE", "INELIGIBLE"]}
+{"assessments": [], "challenge_reason": "", "creator": "0x5B3661C576c7001e6d6279C67F3779705d334c89", "evidence": [], "judgment_id": 0, "round": 0, "rubric": [{"item_id": "hard_income", "kind": "DETERMINISTIC", "rule_count": 0, "rule_kind": "EVIDENCE_CONTAINS", "rule_value": "income", "text": "Evidence must mention income."}, {"item_id": "quality", "kind": "INTERPRETIVE", "rule_count": 0, "rule_kind": "NONE", "rule_value": "", "text": "Assess whether the evidence is sufficient and relevant."}], "rules": {"hard_income": ["ELIGIBLE"]}, "status": "OPEN", "title": "Income eligibility", "verdict_set": ["ELIGIBLE", "INELIGIBLE"]}
 ```
 
 #### Write — `submit_evidence`
 
 Appends one evidence reference.
 
-- tx: `0x480d85f1682f3d466af27aad30fc44b6ddd767138e413b9382699a5d327ba9c6`
-- explorer: https://explorer-studio.genlayer.com/tx/0x480d85f1682f3d466af27aad30fc44b6ddd767138e413b9382699a5d327ba9c6
-- votes: `idle`, `idle`, `agree`, `agree`, `agree`
+- tx: `0x75d12cf4006994acbbad7f8812c5f76b7073a7af239696890fc95cedf64427fa`
+- explorer: https://explorer-studio.genlayer.com/tx/0x75d12cf4006994acbbad7f8812c5f76b7073a7af239696890fc95cedf64427fa
+- votes: `agree`, `idle`, `agree`, `agree`, `agree`
 
 #### Write — `evaluate`
 
 Runs the deterministic rubric check, then a P1 consensus round over the model's verdict. This is a real LLM consensus round.
 
-- tx: `0x22494d3a546b2e427b6c1e042c47fdad1fda13630c44048248e3cfe19b8b89ba`
-- explorer: https://explorer-studio.genlayer.com/tx/0x22494d3a546b2e427b6c1e042c47fdad1fda13630c44048248e3cfe19b8b89ba
+- tx: `0x360eec3db23183fd6542cc78659ef58745b278f219246a14429e55cca23b8676`
+- explorer: https://explorer-studio.genlayer.com/tx/0x360eec3db23183fd6542cc78659ef58745b278f219246a14429e55cca23b8676
 - votes: `agree`, `idle`, `agree`, `idle`, `agree`
 
 #### Read back — `get_assessments(0)`
 
 ```json
-[{"band": "HIGH", "cited_evidence_ids": ["ev0-0"], "cited_item_ids": ["hard_income", "quality"], "digest": "The evidence explicitly states a verified income of 5000 per year, meeting both the deterministic income requirement and the qualitative sufficiency threshold.", "round": 1, "verdict": "ELIGIBLE"}]
+[{"band": "HIGH", "cited_evidence_ids": ["ev0-0"], "cited_item_ids": ["hard_income", "quality"], "digest": "Evidence explicitly states verified income, satisfying the income requirement with sufficient relevance.", "round": 1, "verdict": "ELIGIBLE"}]
 ```
 
 #### Read back — `get_judgment(0)` after evaluation
 
 ```json
-{"assessments": [{"band": "HIGH", "cited_evidence_ids": ["ev0-0"], "cited_item_ids": ["hard_income", "quality"], "digest": "The evidence explicitly states a verified income of 5000 per year, meeting both the deterministic income requirement and the qualitative sufficiency threshold.", "round": 1, "verdict": "ELIGIBLE"}], "challenge_reason": "", "creator": "0x9B368fa9eF3D932F72eC75F5842f2A5F03920eDC", "evidence": [{"evidence_id": "ev0-0", "ref": "income is 5000 per year and verified", "submitted_by": "0x9B368fa9eF3D932F72eC75F5842f2A5F03920eDC"}], "judgment_id": 0, "round": 1, "rubric": [{"item_id": "hard_income", "kind": "DETERMINISTIC", "rule_count": 0, "rule_kind": "EVIDENCE_CONTAINS", "rule_value": "income", "text": "Evidence must mention income."}, {"item_id": "quality", "kind": "INTERPRETIVE", "rule_count": 0, "rule_kind": "NONE", "rule_value": "", "text": "Assess whether the evidence is sufficient and relevant."}], "rules": {"hard_income": ["ELIGIBLE"]}, "status": "EVALUATED", "title": "Income eligibility", "verdict_set": ["ELIGIBLE", "INELIGIBLE"]}
+{"assessments": [{"band": "HIGH", "cited_evidence_ids": ["ev0-0"], "cited_item_ids": ["hard_income", "quality"], "digest": "Evidence explicitly states verified income, satisfying the income requirement with sufficient relevance.", "round": 1, "verdict": "ELIGIBLE"}], "challenge_reason": "", "creator": "0x5B3661C576c7001e6d6279C67F3779705d334c89", "evidence": [{"evidence_id": "ev0-0", "ref": "income is 5000 per year and verified", "submitted_by": "0x5B3661C576c7001e6d6279C67F3779705d334c89"}], "judgment_id": 0, "round": 1, "rubric": [{"item_id": "hard_income", "kind": "DETERMINISTIC", "rule_count": 0, "rule_kind": "EVIDENCE_CONTAINS", "rule_value": "income", "text": "Evidence must mention income."}, {"item_id": "quality", "kind": "INTERPRETIVE", "rule_count": 0, "rule_kind": "NONE", "rule_value": "", "text": "Assess whether the evidence is sufficient and relevant."}], "rules": {"hard_income": ["ELIGIBLE"]}, "status": "EVALUATED", "title": "Income eligibility", "verdict_set": ["ELIGIBLE", "INELIGIBLE"]}
 ```
 
 #### Schema (saved from `genlayer schema <address>`)
@@ -150,12 +150,12 @@ Result:
 | Field | Value |
 |---|---|
 | Contract file | `contracts/web_fact_attestor.py` |
-| Address | `0xAAeBb09e01544e853C8ED91Ad824c0a496a6DC59` |
-| Deploy tx | `0xa4e4406bd40f408652c86c4c18b003225a26f78246e80deaf182c6c14ed55f77` |
-| Explorer (address) | https://explorer-studio.genlayer.com/address/0xAAeBb09e01544e853C8ED91Ad824c0a496a6DC59 |
-| Explorer (deploy tx) | https://explorer-studio.genlayer.com/tx/0xa4e4406bd40f408652c86c4c18b003225a26f78246e80deaf182c6c14ed55f77 |
+| Address | `0x6E720e9d701B542f0f77F52A4cD1b155225ad0FF` |
+| Deploy tx | `0xbc70c569a5334c051025ab315825e326b97ace105a2ab813448a89e3fa5b4888` |
+| Explorer (address) | https://explorer-studio.genlayer.com/address/0x6E720e9d701B542f0f77F52A4cD1b155225ad0FF |
+| Explorer (deploy tx) | https://explorer-studio.genlayer.com/tx/0xbc70c569a5334c051025ab315825e326b97ace105a2ab813448a89e3fa5b4888 |
 
-Deploy votes: `agree`, `idle`, `idle`, `agree`, `agree`
+Deploy votes: `agree`, `idle`, `agree`, `agree`, `idle`
 
 #### First read call — `get_config`
 
@@ -167,34 +167,34 @@ Deploy votes: `agree`, `idle`, `idle`, `agree`, `agree`
 
 Freezes the URL and three fact rules (heading, phrase, word-count bucket).
 
-- tx: `0x433bb30ddbd5b6dce8b8665e5f8bc349b359fa94d9d15d7b3e39136a26defee8`
-- explorer: https://explorer-studio.genlayer.com/tx/0x433bb30ddbd5b6dce8b8665e5f8bc349b359fa94d9d15d7b3e39136a26defee8
-- votes: `agree`, `agree`, `agree`, `idle`, `idle`
+- tx: `0x7195f2943cd0c2381833321cdc2c75bec5b2c75c1f5cb37b354e545606eca570`
+- explorer: https://explorer-studio.genlayer.com/tx/0x7195f2943cd0c2381833321cdc2c75bec5b2c75c1f5cb37b354e545606eca570
+- votes: `agree`, `agree`, `agree`, `agree`, `agree`
 
 #### Read back — `get_spec(0)`
 
 ```json
-{"attestation_ids": [], "creator": "0x9B368fa9eF3D932F72eC75F5842f2A5F03920eDC", "rules": [{"allowed": [], "edges": [], "kind": "BOOL_PRESENT_HEADING", "name": "has_heading", "param": "Example Domain"}, {"allowed": [], "edges": [], "kind": "BOOL_CONTAINS_PHRASE", "name": "mentions_documentation", "param": "documentation examples"}, {"allowed": [], "edges": [10, 100], "kind": "BUCKET_WORD_COUNT", "name": "word_bucket", "param": ""}], "spec_id": 0, "url": "https://example.com/"}
+{"attestation_ids": [], "creator": "0x5B3661C576c7001e6d6279C67F3779705d334c89", "rules": [{"allowed": [], "edges": [], "kind": "BOOL_PRESENT_HEADING", "name": "has_heading", "param": "Example Domain"}, {"allowed": [], "edges": [], "kind": "BOOL_CONTAINS_PHRASE", "name": "mentions_documentation", "param": "documentation examples"}, {"allowed": [], "edges": [10, 100], "kind": "BUCKET_WORD_COUNT", "name": "word_bucket", "param": ""}], "spec_id": 0, "url": "https://example.com/"}
 ```
 
 #### Write — `request_attestation`
 
 Fetches the live page, extracts the facts in code, and reaches P2 consensus. Validators re-fetch the page independently.
 
-- tx: `0x5e59ebbab85e4017a49f276f1851d6d065d0f95a257a19a333078cf1d7095f83`
-- explorer: https://explorer-studio.genlayer.com/tx/0x5e59ebbab85e4017a49f276f1851d6d065d0f95a257a19a333078cf1d7095f83
-- votes: `idle`, `agree`, `agree`, `agree`, `idle`
+- tx: `0x6da2d073f5a97a34b6fa76412dd453c9f7e323a63b6804cba0f4d1a57e79e3d9`
+- explorer: https://explorer-studio.genlayer.com/tx/0x6da2d073f5a97a34b6fa76412dd453c9f7e323a63b6804cba0f4d1a57e79e3d9
+- votes: `idle`, `idle`, `agree`, `agree`, `agree`
 
 #### Read back — `get_latest_attestation(0)`
 
 ```json
-{"attestation_id": 0, "challenge_reason": "", "facts": {"has_heading": false, "mentions_documentation": true, "word_bucket": 27}, "leader_snapshot_digest": "d7ee97cd", "requested_by": "0x9B368fa9eF3D932F72eC75F5842f2A5F03920eDC", "round": 1, "source_status": "OK", "spec_id": 0, "status": "ACTIVE"}
+{"attestation_id": 0, "challenge_reason": "", "facts": {"has_heading": false, "mentions_documentation": true, "word_bucket": 27}, "leader_snapshot_digest": "d7ee97cd", "requested_by": "0x5B3661C576c7001e6d6279C67F3779705d334c89", "round": 1, "source_status": "OK", "spec_id": 0, "status": "ACTIVE"}
 ```
 
 #### Read back — `get_attestations(0)`
 
 ```json
-[{"attestation_id": 0, "challenge_reason": "", "facts": {"has_heading": false, "mentions_documentation": true, "word_bucket": 27}, "leader_snapshot_digest": "d7ee97cd", "requested_by": "0x9B368fa9eF3D932F72eC75F5842f2A5F03920eDC", "round": 1, "source_status": "OK", "spec_id": 0, "status": "ACTIVE"}]
+[{"attestation_id": 0, "challenge_reason": "", "facts": {"has_heading": false, "mentions_documentation": true, "word_bucket": 27}, "leader_snapshot_digest": "d7ee97cd", "requested_by": "0x5B3661C576c7001e6d6279C67F3779705d334c89", "round": 1, "source_status": "OK", "spec_id": 0, "status": "ACTIVE"}]
 ```
 
 #### Schema (saved from `genlayer schema <address>`)
@@ -259,12 +259,12 @@ Result:
 | Field | Value |
 |---|---|
 | Contract file | `contracts/ranking_judge.py` |
-| Address | `0x1D84b33Cab5e2a70fBFe43ACed9bF16DE63d45a0` |
-| Deploy tx | `0x72c49354b506cfc6d2cbc7c23a9cd11bcce4c51032c6570f4f0e7f082e2cd30c` |
-| Explorer (address) | https://explorer-studio.genlayer.com/address/0x1D84b33Cab5e2a70fBFe43ACed9bF16DE63d45a0 |
-| Explorer (deploy tx) | https://explorer-studio.genlayer.com/tx/0x72c49354b506cfc6d2cbc7c23a9cd11bcce4c51032c6570f4f0e7f082e2cd30c |
+| Address | `0x6dc5764eE90dB65E7b102a0e78E7983deD92b717` |
+| Deploy tx | `0x1812bbc8559a9346d643cc84a76d83b564d194b611e1cf4a1fb141d938fd4137` |
+| Explorer (address) | https://explorer-studio.genlayer.com/address/0x6dc5764eE90dB65E7b102a0e78E7983deD92b717 |
+| Explorer (deploy tx) | https://explorer-studio.genlayer.com/tx/0x1812bbc8559a9346d643cc84a76d83b564d194b611e1cf4a1fb141d938fd4137 |
 
-Deploy votes: `idle`, `agree`, `agree`, `agree`, `idle`
+Deploy votes: `agree`, `agree`, `idle`, `agree`, `idle`
 
 #### First read call — `get_config`
 
@@ -276,42 +276,42 @@ Deploy votes: `idle`, `agree`, `agree`, `agree`, `idle`
 
 Freezes the candidate universe, the rubric, and the P4 parameters (top_k 2, overlap 66 percent, rank distance cap 1).
 
-- tx: `0xe8b705f19040bd962c3aa65e5dda3e5eb58229ee48079212fb18b621176b4065`
-- explorer: https://explorer-studio.genlayer.com/tx/0xe8b705f19040bd962c3aa65e5dda3e5eb58229ee48079212fb18b621176b4065
-- votes: `agree`, `agree`, `agree`, `idle`, `agree`
+- tx: `0x315eb1e07cdfd42d55756a127af8d189ad502286a34d14ff12bf6bc264d0fe90`
+- explorer: https://explorer-studio.genlayer.com/tx/0x315eb1e07cdfd42d55756a127af8d189ad502286a34d14ff12bf6bc264d0fe90
+- votes: `agree`, `agree`, `agree`, `agree`, `idle`
 
 #### Write — `submit_evidence`
 
 Appends one evidence reference. The reference text is stored and shown to the model.
 
-- tx: `0x5910167a4f7ca137b10d82036a4a5c800aec28392b895e39540fb08392273388`
-- explorer: https://explorer-studio.genlayer.com/tx/0x5910167a4f7ca137b10d82036a4a5c800aec28392b895e39540fb08392273388
-- votes: `idle`, `idle`, `agree`, `agree`, `agree`
+- tx: `0xd26e0618de50c3b5d34fb32b7eb5d161952c4b53a0f2a27abdd89db19978af44`
+- explorer: https://explorer-studio.genlayer.com/tx/0xd26e0618de50c3b5d34fb32b7eb5d161952c4b53a0f2a27abdd89db19978af44
+- votes: `agree`, `agree`, `agree`, `idle`, `idle`
 
 #### Read back — `get_evidence(0)`
 
 ```json
-[{"evidence_id": "ev0-0", "ref": "Question: which vendors have the better uptime record? Acme reports 99.95 percent uptime for the last year. Globex reports 99.1 percent uptime for the last year. Initech reports 99.5 percent uptime but only over the last month. Umbrella reports no uptime figures at all.", "submitted_by": "0x9B368fa9eF3D932F72eC75F5842f2A5F03920eDC"}]
+[{"evidence_id": "ev0-0", "ref": "Question: which vendors have the better uptime record? Acme reports 99.95 percent uptime for the last year. Globex reports 99.1 percent uptime for the last year. Initech reports 99.5 percent uptime but only over the last month. Umbrella reports no uptime figures at all.", "submitted_by": "0x5B3661C576c7001e6d6279C67F3779705d334c89"}]
 ```
 
 #### Write — `rank`
 
 A real LLM consensus round over the P4 rule: candidate universe check plus top-k overlap and the rank-distance cap.
 
-- tx: `0xb22f5026bc228b00f47aa39ed49722dcf5451aca69fa586304563bd6004c1e11`
-- explorer: https://explorer-studio.genlayer.com/tx/0xb22f5026bc228b00f47aa39ed49722dcf5451aca69fa586304563bd6004c1e11
-- votes: `agree`, `idle`, `agree`, `agree`, `idle`
+- tx: `0xc853d0ae85814eff143fa7bafccba2444755ccd055a993e3bbbf8dfaddcd5378`
+- explorer: https://explorer-studio.genlayer.com/tx/0xc853d0ae85814eff143fa7bafccba2444755ccd055a993e3bbbf8dfaddcd5378
+- votes: `idle`, `idle`, `agree`, `agree`, `agree`
 
 #### Read back — `get_ranking(0)`
 
 ```json
-{"candidates": ["acme", "globex", "initech", "umbrella"], "creator": "0x9B368fa9eF3D932F72eC75F5842f2A5F03920eDC", "evidence": [{"evidence_id": "ev0-0", "ref": "Question: which vendors have the better uptime record? Acme reports 99.95 percent uptime for the last year. Globex reports 99.1 percent uptime for the last year. Initech reports 99.5 percent uptime but only over the last month. Umbrella reports no uptime figures at all.", "submitted_by": "0x9B368fa9eF3D932F72eC75F5842f2A5F03920eDC"}], "max_rank_distance": 1, "min_overlap_pct": 50, "ranking_history": ["{\"digest\": \"Acme leads with the highest uptime (99.95%) over a full year, providing both strong performance and a long measurement window. Initech shows 99.5% uptime but only over one month, making the data less comprehensive. Globex reports 99.1% over a full year, which is a lower figure th\", \"ranking\": [\"acme\", \"initech\", \"globex\", \"umbrella\"], \"round\": 1}"], "ranking_id": 0, "round_count": 1, "rubric_json": "[{\"item_id\": \"relevance\", \"text\": \"Rank by how directly the evidence answers the question.\", \"kind\": \"INTERPRETIVE\", \"rule_kind\": \"NONE\"}, {\"item_id\": \"freshness\", \"text\": \"Prefer the more recent evidence.\", \"kind\": \"INTERPRETIVE\", \"rule_kind\": \"NONE\"}]", "status": "RANKED", "title": "Vendor ranking", "top_k": 2}
+{"candidates": ["acme", "globex", "initech", "umbrella"], "creator": "0x5B3661C576c7001e6d6279C67F3779705d334c89", "evidence": [{"evidence_id": "ev0-0", "ref": "Question: which vendors have the better uptime record? Acme reports 99.95 percent uptime for the last year. Globex reports 99.1 percent uptime for the last year. Initech reports 99.5 percent uptime but only over the last month. Umbrella reports no uptime figures at all.", "submitted_by": "0x5B3661C576c7001e6d6279C67F3779705d334c89"}], "max_rank_distance": 1, "min_overlap_pct": 50, "ranking_history": ["{\"digest\": \"Acme is best supported by direct, recent yearly uptime data (99.95%). Globex also has direct yearly data (99.1%). Initech has a higher-than-Globex figure but only for the last month, so it is less fresh/comparable. Umbrella provides no uptime figures.\", \"ranking\": [\"acme\", \"globex\", \"initech\", \"umbrella\"], \"round\": 1}"], "ranking_id": 0, "round_count": 1, "rubric_json": "[{\"item_id\": \"relevance\", \"text\": \"Rank by how directly the evidence answers the question.\", \"kind\": \"INTERPRETIVE\", \"rule_kind\": \"NONE\"}, {\"item_id\": \"freshness\", \"text\": \"Prefer the more recent evidence.\", \"kind\": \"INTERPRETIVE\", \"rule_kind\": \"NONE\"}]", "status": "RANKED", "title": "Vendor ranking", "top_k": 2}
 ```
 
 #### Read back — `get_rankings(0)`
 
 ```json
-["{\"digest\": \"Acme leads with the highest uptime (99.95%) over a full year, providing both strong performance and a long measurement window. Initech shows 99.5% uptime but only over one month, making the data less comprehensive. Globex reports 99.1% over a full year, which is a lower figure th\", \"ranking\": [\"acme\", \"initech\", \"globex\", \"umbrella\"], \"round\": 1}"]
+["{\"digest\": \"Acme is best supported by direct, recent yearly uptime data (99.95%). Globex also has direct yearly data (99.1%). Initech has a higher-than-Globex figure but only for the last month, so it is less fresh/comparable. Umbrella provides no uptime figures.\", \"ranking\": [\"acme\", \"globex\", \"initech\", \"umbrella\"], \"round\": 1}"]
 ```
 
 #### Schema (saved from `genlayer schema <address>`)

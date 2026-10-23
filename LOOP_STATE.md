@@ -53,9 +53,13 @@ is in `deployments/studionet.md`.
 
 | Contract | Address |
 |---|---|
-| VerdictJudge | `0x252068B9Cd0399cE5516fC8A2a04dE088FD45Ec7` |
-| WebFactAttestor | `0xAAeBb09e01544e853C8ED91Ad824c0a496a6DC59` |
-| RankingJudge | `0x1D84b33Cab5e2a70fBFe43ACed9bF16DE63d45a0` |
+| VerdictJudge | `0xC4B6E69EC35A9114b43397F6bB59541bC8c5e94B` |
+| WebFactAttestor | `0x6E720e9d701B542f0f77F52A4cD1b155225ad0FF` |
+| RankingJudge | `0x6dc5764eE90dB65E7b102a0e78E7983deD92b717` |
+
+Regenerated 2026-10-23 with the user's StudioNet wallet
+(`0x5B3661C576c7001e6d6279C67F3779705d334c89`) as creator, so the contracts are
+owned by them rather than the default test account.
 
 ## Verification (pass 14)
 
@@ -83,6 +87,9 @@ $ python3.12 -m pytest tests/integration tests/deploy -v -s --network studionet
 ## Open gaps
 
 1. M10 testnet deployment (Bradbury/Asimov) — hard stop, needs funded account at the faucet.
+   StudioNet has been re-deployed under the user's own wallet
+   (`0x5B3661C576c7001e6d6279C67F3779705d334c89`); those addresses are in
+   `deployments/studionet.md`.
 2. M-UI-8 hosting — manual deploy to any static host.
 3. The local GenLayer node (jsonrpc + postgres) is down because the host already occupies
    :5432. The StudioNet tests no longer need it: they fetch the schema of the deployed

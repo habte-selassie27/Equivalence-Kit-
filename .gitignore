@@ -10,3 +10,4 @@ playground/dist/
 .coverage
 htmlcov/
 *.egg-info/
+gltest.config.yaml
