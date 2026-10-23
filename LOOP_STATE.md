@@ -125,6 +125,7 @@ Verification: 265 local tests pass; vendor fresh; tightness 60/60; site data up 
 
 ## Next step
 
-Project is submission-ready on StudioNet. Remaining work is optional:
-`ekit scaffold`, `ekit matrix`, Pattern Builder playground screen, hosted playground.
-M10 (testnet) is explicitly out of scope (StudioNet only).
+Pass 18 complete: `ekit scaffold`, `ekit matrix`, `tests/site` staleness guard, GitHub
+Pages workflow. Project is submission-ready on StudioNet. Remaining optional work:
+Pattern Builder playground screen. M10 (testnet) is explicitly out of scope
+(StudioNet only).

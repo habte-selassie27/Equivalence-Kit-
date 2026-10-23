@@ -279,3 +279,13 @@ running. See `tests/helpers.py::deploy_contract`.
   `python3.12 tools/export_site_data.py --check` invocation is now a pytest gate under
   the pinned interpreter, closing the manual-gate loop (item M-UI-5 of the todo).
 
+
+## 2026-10-23 — pass 18 (CLI commands, site guard, hosting config)
+
+- `ekit scaffold --pattern P1..P6 --name X --out path`: copies the matching reference
+  contract, renames the class, writes a matrix stub. Output passes genvm-lint and
+  ekit audit.
+- `ekit matrix <file-or-dir> [--json] [--check]`: runs acceptance cases and (when a
+  canonical.json is present) perturbation generators, prints the tightness report.
+- `tests/site/test_site_data.py`: wraps `export_site_data.py --check` as a pytest test.
+- `.github/workflows/pages.yml`: builds and deploys the playground to GitHub Pages.
