@@ -57,6 +57,9 @@ export function PlaygroundScreen() {
   const [running, setRunning] = useState(false);
   const [seed, setSeed] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
+  const [applied, setApplied] = useState<{ mode: "harmless" | "harmful"; seed: number } | null>(
+    null,
+  );
   const [engineStatus, setEngineStatus] = useState<EngineStatus>(engine.getStatus());
 
   useEffect(() => engine.onStatus(setEngineStatus), []);
@@ -72,6 +75,7 @@ export function PlaygroundScreen() {
       setValidatorText(formatJson(matrixCase.validator));
       setContextText(formatJson(matrixCase.context));
       setLoadedCase(matrixCase);
+      setApplied(null);
       setOutcome({
         kind: "precomputed",
         ok: matrixCase.expected === "ACCEPT",
@@ -145,17 +149,34 @@ export function PlaygroundScreen() {
     setRunning(true);
     setError(null);
     try {
+      const usedSeed = seed;
       const variant = await engine.send({
         kind: "perturb",
         patternId,
         leader: leader.value,
         mode,
-        seed,
+        seed: usedSeed,
       });
       setValidatorText(formatJson(variant));
       setSeed((current) => (current + 1) % (MAX_SEED + 1));
-      setOutcome(null);
-      setToast(mode === "harmless" ? "Harmless variation applied" : "Harmful variation applied");
+      setApplied({ mode, seed: usedSeed });
+
+      // Run the comparison straight away so the expected outcome is visible. Applying a
+      // variation only fills the validator box; nothing is saved.
+      const context = parseJson(contextText);
+      const result = (await engine.send({
+        kind: "compare",
+        patternId,
+        leader: leader.value,
+        validator: variant,
+        context: context.ok ? context.value : {},
+      })) as CompareResult;
+      setOutcome({ kind: "live", result });
+      setToast(
+        mode === "harmless"
+          ? "Harmless variation applied — expected: accepted"
+          : "Harmful variation applied — expected: rejected",
+      );
       setTimeout(() => setToast(null), 2000);
     } catch (caught) {
       setError(engineErrorMessage(caught, variationFailed));
@@ -223,6 +244,7 @@ export function PlaygroundScreen() {
   };
 
   const reset = () => {
+    setApplied(null);
     if (initialCase) {
       loadCase(initialCase);
     }
@@ -324,6 +346,7 @@ export function PlaygroundScreen() {
             onChange={(next) => {
               setValidatorText(next);
               setOutcome(null);
+              setApplied(null);
             }}
           />
           <JsonEditor
@@ -391,6 +414,22 @@ export function PlaygroundScreen() {
             }}
           />
         </div>
+
+        {applied ? (
+          <p className="small muted">
+            The validator box now holds the {applied.mode} variation (seed {applied.seed}).
+            Expected: {applied.mode === "harmless" ? "accepted" : "rejected"}. Applying
+            another variation replaces this one; nothing is saved.
+          </p>
+        ) : null}
+        {applied &&
+        outcome?.kind === "live" &&
+        (applied.mode === "harmless") !== outcome.result.ok ? (
+          <p className="status-bad">
+            Unexpected result: a {applied.mode} change was{" "}
+            {outcome.result.ok ? "accepted" : "rejected"}. This is a rule gap.
+          </p>
+        ) : null}
 
         {error ? <ErrorNotice message={error} /> : null}
         {toast ? <p className="small toast">{toast}</p> : null}

@@ -331,3 +331,13 @@ running. See `tests/helpers.py::deploy_contract`.
   the browser (identity case, 10 harmless + 10 harmful perturbations), see the rates, and
   export the spec JSON and a contract skeleton.
 - App.tsx: nav link + route wired; typecheck clean; 74 tests still pass; build succeeds.
+
+## 2026-10-23 — playground variation clarity
+
+- Playground: applying a harmless or harmful variation now immediately runs the
+  comparison, states the expected outcome, and shows an explicit rule-gap message when
+  the result does not match. A status line names the variation in the validator box and
+  says that another click replaces it and nothing is saved.
+- Builder: new "What Run tightness checks" panel explains the identity case, the ten
+  harmless generators, and the ten harmful generators per pattern, and that runs are
+  in-memory only.
