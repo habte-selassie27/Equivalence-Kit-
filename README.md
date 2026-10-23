@@ -62,7 +62,7 @@ genvm-lint check contracts/web_fact_attestor.py --json
 python3.12 -m pytest tests/integration -v -s --network studionet
 ```
 
-Current status: **272 tests passing** (primitives, matrices, direct, vendored equivalence);
+Current status: **278 tests passing** (primitives, matrices, direct, vendored equivalence);
 all four contracts lint clean; tightness 60/60 on both bars.
 
 ## What is in the kit

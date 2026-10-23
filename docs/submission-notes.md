@@ -26,10 +26,11 @@ perturbation generators) that reports harmless-acceptance and harmful-rejection 
 ## How to use
 
 1. Run the primitive gates: `pytest tests/primitives tests/matrices tests/direct tests/site -v`
-   (272 tests, no GenLayer needed).
+   (278 tests, no GenLayer needed).
 2. Lint the contracts: `genvm-lint check contracts/<file>.py --json`.
 3. Audit a contract against the anti-pattern gallery: `ekit audit contracts/ --json`.
 4. Run an acceptance matrix: `ekit matrix tests/matrices/P1.json` (or `--json`).
+5. Diagnose a failed transaction: `ekit diagnose <txHash>` (or `--from-file`).
 5. Diagnose a failed transaction: `ekit diagnose <txHash>`.
 6. Deploy: `genlayer network set studionet`, then `genlayer deploy contracts/<file>.py`.
 7. Optional playground: `cd frontend && npm install && npm run dev`.

@@ -1,10 +1,13 @@
 """Console entry point for the ``ekit`` command."""
 
 import argparse
+import json
+from dataclasses import asdict
 from pathlib import Path
 
 from equivalencekit.matrix_runner import run_matrix
 from equivalencekit.scaffold import scaffold
+from equivalencekit.diagnose import diagnose_text, fetch_receipt, format_text
 
 
 def main(argv=None) -> int:
@@ -28,6 +31,12 @@ def main(argv=None) -> int:
     mx.add_argument("--check", action="store_true",
                     help="exit non-zero unless all cases and perturbations pass")
 
+    dg = sub.add_parser("diagnose", help="diagnose a failed transaction from its receipt")
+    dg.add_argument("txhash", nargs="?", help="transaction hash (requires the genlayer CLI)")
+    dg.add_argument("--from-file", default=None,
+                    help="read the receipt text from a file instead of calling genlayer")
+    dg.add_argument("--json", action="store_true", help="emit machine-readable JSON")
+
     args = parser.parse_args(argv)
 
     if args.command == "audit":
@@ -44,6 +53,27 @@ def main(argv=None) -> int:
 
     if args.command == "matrix":
         return run_matrix(Path(args.path), as_json=args.json, check=args.check)
+
+    if args.command == "diagnose":
+        if args.from_file:
+            text = Path(args.from_file).read_text()
+            source = args.from_file
+        elif args.txhash:
+            try:
+                text = fetch_receipt(args.txhash)
+            except RuntimeError as exc:
+                print(str(exc))
+                return 2
+            source = args.txhash
+        else:
+            parser.error("diagnose requires a txhash or --from-file")
+            return 2
+        diagnoses = diagnose_text(text)
+        if args.json:
+            print(json.dumps([asdict(d) for d in diagnoses], indent=2))
+        else:
+            print(format_text(diagnoses, source=source))
+        return 0
 
     return 2
 
