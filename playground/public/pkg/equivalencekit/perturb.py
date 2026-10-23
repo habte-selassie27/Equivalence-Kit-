@@ -26,7 +26,7 @@ def harmless_variation(pattern_id: str, output: dict, seed: int = 0) -> dict:
         variant["verdict"] = str(variant.get("verdict", "")).strip().lower()
         band = str(variant.get("band", "LOW")).strip().upper()
         index = BANDS.index(band) if band in BANDS else 0
-        if rng.random() < 0.5:
+        if rng.random() < 0.5:  # ekit: ignore A13
             index = max(0, index - 1)
         else:
             index = min(len(BANDS) - 1, index + 1)

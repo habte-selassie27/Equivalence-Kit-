@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "files": [
     "__init__.py",
+    "__main__.py",
+    "audit.py",
     "bounds.py",
+    "cli.py",
     "compare.py",
     "digest.py",
     "errors.py",
