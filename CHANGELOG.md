@@ -464,3 +464,19 @@ running. See `tests/helpers.py::deploy_contract`.
   (`ENGINE: ...`) instead of a generic "couldn't start", and the header status shows it
   on hover. The copy no longer blames the user's input for a boot failure.
 - Engine copy updated from "about 5 MB from the CDN" to about 13 MB from this site.
+
+## 2026-10-23 — smooth spec and matrix swap on Patterns
+
+- Selecting P1–P6 used to replace a long spec and a tall acceptance matrix in a single
+  frame, so the text snapped and the matrix jumped to a new vertical position. The
+  Patterns screen now wraps the state update in the View Transition API
+  (`document.startViewTransition`), naming `.pattern-detail` and `.matrix-panel`. The
+  browser fades the old spec out, brings the new one in, and moves the matrix to its new
+  position. The old root snapshot is hidden immediately so the selected list card never
+  lags behind the spec.
+- The transition is skipped when the reader asks for reduced motion or the browser has no
+  View Transition support; the selection still works in both cases.
+- The matrix filter resets to “All cases” on a pattern change (the table is keyed by
+  pattern), so a filter chosen for P1 cannot silently hide P2's cases.
+- Test: `screens.test.tsx` clicks P2 after choosing the Boundary filter and asserts the
+  new spec heading and the reset filter.

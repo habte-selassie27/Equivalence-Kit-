@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { findPattern, matrices, packageVersion } from "../../data/load";
 import { MatrixTable } from "../../components/MatrixTable";
@@ -32,10 +33,33 @@ export function PatternsScreen() {
   const matrix = matrices[patternId];
 
   const select = (id: string) => {
-    setPatternId(id);
-    const params = new URLSearchParams(searchParams);
-    params.set("pattern", id);
-    setSearchParams(params, { replace: true });
+    if (id === patternId) return;
+
+    const updateUrl = () => {
+      const params = new URLSearchParams(searchParams);
+      params.set("pattern", id);
+      setSearchParams(params, { replace: true });
+    };
+
+    // A pattern change replaces a long spec and a tall matrix at once. Without help
+    // that reads as a snap (and the matrix jumps to a new vertical position). The
+    // View Transition API animates the old and new panels into place; browsers without
+    // it, and readers who ask for reduced motion, get the plain swap.
+    const reducedMotion =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (!reducedMotion && typeof document.startViewTransition === "function") {
+      document.startViewTransition(() => {
+        // flushSync keeps the new spec in the DOM before the browser takes its
+        // "after" snapshot; without it React may paint after the snapshot.
+        flushSync(() => setPatternId(id));
+        updateUrl();
+      });
+    } else {
+      setPatternId(id);
+      updateUrl();
+    }
   };
 
   const tryInPlayground = (matrixCase: MatrixCase) => {
@@ -86,10 +110,10 @@ export function PatternsScreen() {
       </div>
 
       {matrix ? (
-        <div className="panel">
+        <div className="panel matrix-panel">
           <h2 className="panel-title">Acceptance matrix</h2>
           <p className="panel-note">{matrix.description}</p>
-          <MatrixTable cases={matrix.cases} onLoad={tryInPlayground} />
+          <MatrixTable key={patternId} cases={matrix.cases} onLoad={tryInPlayground} />
         </div>
       ) : null}
     </div>

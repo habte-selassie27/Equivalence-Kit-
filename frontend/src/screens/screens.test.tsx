@@ -48,6 +48,21 @@ describe("Patterns screen", () => {
     expect(screen.getAllByText(/also exercised:/).length).toBeGreaterThan(0);
   });
 
+  it("switches specs and resets the matrix filter when another pattern is selected", async () => {
+    const user = await fireEvent();
+    renderScreen(<PatternsScreen />);
+
+    const filter = screen.getByLabelText("Show") as HTMLSelectElement;
+    user.change(filter, { target: { value: "BOUNDARY" } });
+    expect(filter.value).toBe("BOUNDARY");
+
+    user.click(screen.getByRole("button", { name: /^P2/ }));
+    expect(
+      screen.getByRole("heading", { name: "Fact set", level: 3 }),
+    ).toBeInTheDocument();
+    expect((screen.getByLabelText("Show") as HTMLSelectElement).value).toBe("ALL");
+  });
+
   it("opens the playground with the chosen case", async () => {
     const user = await fireEvent();
     const { container } = render(

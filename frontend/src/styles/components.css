@@ -1176,6 +1176,72 @@
   align-items: start;
 }
 
+/* The spec and its matrix are long and of different heights. Naming them lets the
+   browser crossfade the content and move the matrix to its new position when a
+   pattern is selected, instead of snapping. See startViewTransition in the screen. */
+.pattern-detail {
+  view-transition-name: pattern-detail;
+}
+
+.matrix-panel {
+  view-transition-name: pattern-matrix;
+}
+
+/* The page around the two panels should switch immediately (the selected card must
+   never lag behind the spec). Only the old root snapshot has to be hidden: with no
+   animation it would otherwise sit over the live page for the whole transition. */
+::view-transition-old(root) {
+  animation: none;
+  opacity: 0;
+}
+
+::view-transition-new(root) {
+  animation: none;
+}
+
+@keyframes pattern-leave {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes pattern-enter {
+  from {
+    opacity: 0;
+  }
+}
+
+::view-transition-group(pattern-detail),
+::view-transition-group(pattern-matrix) {
+  animation-duration: var(--speed-base);
+  animation-timing-function: var(--ease-out);
+}
+
+/* Leave first, arrive just after: a straight crossfade puts both spec texts on top
+   of each other, which reads as a blur rather than a switch. */
+::view-transition-old(pattern-detail),
+::view-transition-old(pattern-matrix) {
+  animation: pattern-leave 100ms var(--ease-out) both;
+}
+
+::view-transition-new(pattern-detail),
+::view-transition-new(pattern-matrix) {
+  animation: pattern-enter 160ms 60ms var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root),
+  ::view-transition-group(pattern-detail),
+  ::view-transition-group(pattern-matrix),
+  ::view-transition-old(pattern-detail),
+  ::view-transition-old(pattern-matrix),
+  ::view-transition-new(pattern-detail),
+  ::view-transition-new(pattern-matrix) {
+    animation: none !important;
+  }
+}
+
 .pattern-list {
   display: flex;
   flex-direction: column;
