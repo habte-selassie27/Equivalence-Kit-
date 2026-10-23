@@ -68,7 +68,7 @@ export const DEPLOYMENTS: Deployment[] = [
     label: "VerdictJudge",
     file: "contracts/verdict_judge.py",
     pattern: "P1",
-    address: "0xC4B6E69EC35A9114b43397F6bB59541bC8c5e94B",
+    address: "0x6cC47A13978911eE9124Ad20b64118d136dDC689",
     counterKey: "judgments_created",
     recordView: "get_judgment",
     reads: [
@@ -116,7 +116,7 @@ export const DEPLOYMENTS: Deployment[] = [
     label: "WebFactAttestor",
     file: "contracts/web_fact_attestor.py",
     pattern: "P2",
-    address: "0x6E720e9d701B542f0f77F52A4cD1b155225ad0FF",
+    address: "0x8BBdf514EABFec622DED300dD39aD6e9d889E163",
     counterKey: "specs_created",
     recordView: "get_spec",
     reads: [
@@ -162,7 +162,7 @@ export const DEPLOYMENTS: Deployment[] = [
     label: "RankingJudge",
     file: "contracts/ranking_judge.py",
     pattern: "P4",
-    address: "0x6dc5764eE90dB65E7b102a0e78E7983deD92b717",
+    address: "0x7765Ce75320ca05974E79b25f029c2213a378A83",
     counterKey: "records_created",
     recordView: "get_ranking",
     reads: [

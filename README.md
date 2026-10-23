@@ -176,9 +176,9 @@ record — addresses, transaction hashes, saved schemas, and per-step validator 
 
 | Contract | Address | Explorer |
 |---|---|---|
-| VerdictJudge | `0xC4B6E69EC35A9114b43397F6bB59541bC8c5e94B` | [view](https://explorer-studio.genlayer.com/address/0xC4B6E69EC35A9114b43397F6bB59541bC8c5e94B) |
-| WebFactAttestor | `0x6E720e9d701B542f0f77F52A4cD1b155225ad0FF` | [view](https://explorer-studio.genlayer.com/address/0x6E720e9d701B542f0f77F52A4cD1b155225ad0FF) |
-| RankingJudge | `0x6dc5764eE90dB65E7b102a0e78E7983deD92b717` | [view](https://explorer-studio.genlayer.com/address/0x6dc5764eE90dB65E7b102a0e78E7983deD92b717) |
+| VerdictJudge | `0x6cC47A13978911eE9124Ad20b64118d136dDC689` | [view](https://explorer-studio.genlayer.com/address/0x6cC47A13978911eE9124Ad20b64118d136dDC689) |
+| WebFactAttestor | `0x8BBdf514EABFec622DED300dD39aD6e9d889E163` | [view](https://explorer-studio.genlayer.com/address/0x8BBdf514EABFec622DED300dD39aD6e9d889E163) |
+| RankingJudge | `0x7765Ce75320ca05974E79b25f029c2213a378A83` | [view](https://explorer-studio.genlayer.com/address/0x7765Ce75320ca05974E79b25f029c2213a378A83) |
 
 A VerdictJudge evaluation reached agreement on a real LLM round with the digest stored but
 never compared. A WebFactAttestor attestation fetched the live `example.com` page under P2
