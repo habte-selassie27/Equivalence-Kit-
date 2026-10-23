@@ -263,3 +263,19 @@ running. See `tests/helpers.py::deploy_contract`.
   A23, with ignore directives and vendored-block awareness. `ekit --version`.
 - Added `tests/primitives/test_audit.py` (8 tests). Own code audits clean.
 - README: install + audit quick start, three-contract wording, audit linter row.
+
+## 2026-10-23 — pass 16 (M-UI-8 playground hosting + site-data gate)
+
+- Hosted the playground on GitHub Pages: `gh-pages` branch served from `playground/dist`
+  (vite `base "./"` makes the bundle path-agnostic), Pages already enabled on
+  `gh-pages`/`:root` from the deploy session. Live at
+  https://habte-selassie27.github.io/Equivalence-Kit-/ — probes verified HTTP 200 on
+  the root, the hashed CSS bundle, and the Pyodide runtime copy; record in
+  deployments/pages.md.
+- Added `tools/deploy_playground_site.sh`: idempotent refresh (fresh build → orphan
+  `gh-pages` via a throwaway worktree → force push), so the hosted site never drifts
+  from `dist`.
+- Added `tests/site/test_export_is_fresh.py`: the documented
+  `python3.12 tools/export_site_data.py --check` invocation is now a pytest gate under
+  the pinned interpreter, closing the manual-gate loop (item M-UI-5 of the todo).
+
