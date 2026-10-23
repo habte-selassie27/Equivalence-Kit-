@@ -16,9 +16,10 @@ import type {
   WorkerResponse,
 } from "./protocol";
 
-const PYODIDE_VERSION = "0.26.2";
-const PYODIDE_URL = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/pyodide.mjs`;
-// The package base is sent by the main thread, because a worker resolves relative URLs
+// The Pyodide runtime is served from this site (public/pyodide/, copied by
+// tools/copy_pkg.mjs), not from a CDN. It is resolved from pkgBase on init because a
+// worker resolves relative URLs against its own asset path rather than the page.
+let pyodideBaseValue = "/pyodide/";// The package base is sent by the main thread, because a worker resolves relative URLs
 // against its own asset path rather than the page.
 let pkgBaseValue = "/pkg/";
 
@@ -39,26 +40,49 @@ interface Pyodide {
 
 let pyodide: Pyodide | null = null;
 let packageVersion = "unknown";
+let bootPromise: Promise<void> | null = null;
 
 /**
- * Load Pyodide, then write the package source into the in-memory filesystem and import
- * it as a normal package. Importing the real package (rather than a copy) is the point:
- * the site must show what the contracts actually do.
- *
  * The package lives at a clean in-FS path: sys.path entries are Unix paths inside the
  * Pyodide filesystem, so the pkg URL the main thread sends is only used for fetching
  * the source files, never as an import path.
  */
 const PKG_MOUNT = "/lib";
 
+/**
+ * Load Pyodide once, no matter how many requests arrive during boot.
+ *
+ * The shell and the active screen both warm the engine up, and React StrictMode mounts
+ * effects twice in development. Without a shared promise each call started its own
+ * Pyodide download — several copies of the 13 MB runtime at once — which could trip the
+ * boot watchdog on a slow connection.
+ */
 async function loadEngine(): Promise<void> {
   if (pyodide) return;
+  if (!bootPromise) {
+    bootPromise = boot();
+  }
+  try {
+    await bootPromise;
+  } catch (error) {
+    // Let Retry start a fresh boot after a real failure.
+    bootPromise = null;
+    throw error;
+  }
+}
 
-  const module = (await import(/* @vite-ignore */ PYODIDE_URL)) as PyodideModule;
+/**
+ * Load Pyodide, then write the package source into the in-memory filesystem and import
+ * it as a normal package. Importing the real package (rather than a copy) is the point:
+ * the site must show what the contracts actually do.
+ */
+async function boot(): Promise<void> {
+  const module = (await import(
+    /* @vite-ignore */ `${pyodideBaseValue}pyodide.mjs`
+  )) as PyodideModule;
   const instance = await module.loadPyodide({
-    indexURL: `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`,
+    indexURL: pyodideBaseValue,
   });
-  pyodide = instance;
 
   const manifestResponse = await fetch(`${pkgBaseValue}manifest.json`);
   if (!manifestResponse.ok) {
@@ -89,6 +113,9 @@ from equivalencekit.normalize import normalize_text, normalize_enum, normalize_b
 from equivalencekit import __version__ as __ek_version__
 `);
   packageVersion = manifest.version;
+  // Publish the instance only after the package imports, so no request can run against
+  // a half-initialised runtime.
+  pyodide = instance;
 }
 
 /**
@@ -210,6 +237,8 @@ self.onmessage = async (event: MessageEvent<WorkerRequest | WorkerInit>) => {
   if ((data as WorkerInit).kind === "init") {
     const pkgBase = (data as WorkerInit).pkgBase;
     pkgBaseValue = pkgBase.endsWith("/") ? pkgBase : `${pkgBase}/`;
+    // public/pkg/ is a sibling of public/pyodide/.
+    pyodideBaseValue = new URL("../pyodide/", pkgBaseValue).href;
     return;
   }
 

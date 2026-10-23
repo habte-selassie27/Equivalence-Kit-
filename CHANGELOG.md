@@ -450,3 +450,17 @@ running. See `tests/helpers.py::deploy_contract`.
   flow, so no element moves when a pattern is selected at any scroll position.
 - Verified in a browser at 1487×1031: clicking P1–P6 leaves every list item and the panel
   top fixed; clicking while scrolled 0–500 moves neither the list nor the scroll position.
+
+## 2026-10-23 — self-host Pyodide and show engine boot failures
+
+- The Pyodide runtime was loaded from `cdn.jsdelivr.net`. It is now copied from the npm
+  dependency into `frontend/public/pyodide/` by `npm run sync:pkg` and served from the
+  site itself, so the engine boots on networks that block third-party CDNs. The directory
+  is generated (gitignored) and rebuilt by `predev`/`prebuild`.
+- `loadEngine()` now shares one boot promise. The shell and the active screen both warm
+  the engine, and StrictMode doubles effects in development; previously each call started
+  its own download and Pyodide instance (several copies of the 13 MB runtime).
+- The Playground and Builder banners now include the real failure reason
+  (`ENGINE: ...`) instead of a generic "couldn't start", and the header status shows it
+  on hover. The copy no longer blames the user's input for a boot failure.
+- Engine copy updated from "about 5 MB from the CDN" to about 13 MB from this site.

@@ -62,10 +62,18 @@ export function PlaygroundScreen() {
     null,
   );
   const [engineStatus, setEngineStatus] = useState<EngineStatus>(engine.getStatus());
-  // First boot pull ~5 MB over the CDN; after 12 s the hint explains the wait honestly.
+  const [engineError, setEngineError] = useState<string | null>(engine.getLastError());
+  // First boot pulls about 13 MB from this site; after 12 s the hint explains the wait.
   const slowBoot = useSlowBoot(engineStatus === "loading");
 
-  useEffect(() => engine.onStatus(setEngineStatus), []);
+  useEffect(
+    () =>
+      engine.onStatus((status) => {
+        setEngineStatus(status);
+        setEngineError(engine.getLastError());
+      }),
+    [],
+  );
   useEffect(() => {
     void engine.warmUp();
   }, []);
@@ -325,7 +333,7 @@ export function PlaygroundScreen() {
       <div className="panel">
         {engineFailed ? (
           <ErrorNotice
-            message="The engine couldn't start. Showing stored results only. Free-form comparison is unavailable — try smaller inputs, then retry."
+            message={`The engine couldn't start${engineError ? ` (${engineError})` : ""}. Showing stored results only. Free-form comparison is unavailable — check that this site can load /pyodide/, then retry.`}
             action={
               <button type="button" className="btn small" onClick={retryEngine}>
                 Retry the engine
@@ -365,7 +373,7 @@ export function PlaygroundScreen() {
           {engineStatus === "loading" ? (
             <span className="small muted engine-hint">
               {slowBoot
-                ? "Still loading — first visit fetches about 5 MB from the CDN, cached afterwards"
+                ? "Still loading — first visit fetches about 13 MB from this site, cached afterwards"
                 : "Loading the engine…"}
             </span>
           ) : null}

@@ -19,21 +19,25 @@ const EQUIVALENCE_DOCS_URL =
   "https://docs.genlayer.com/developers/intelligent-contracts/equivalence-principle";
 
 function EngineStatusLine({ status }: { status: EngineStatus }) {
-  // After 12 s of loading, say why: a first visit downloads the engine from the CDN.
+  // After 12 s of loading, say why: a first visit downloads the engine files.
   const slowBoot = useSlowBoot(status === "loading");
   const label =
     status === "ready"
       ? `Engine ready — equivalencekit ${packageVersion}`
       : status === "loading"
         ? slowBoot
-          ? "Loading the engine — first visit fetches about 5 MB from the CDN"
+          ? "Loading the engine — first visit fetches about 13 MB from this site"
           : "Loading the engine"
         : status === "failed"
           ? "Using precomputed results"
           : "Engine idle";
 
   return (
-    <span className="engine-status" data-status={status}>
+    <span
+      className="engine-status"
+      data-status={status}
+      title={status === "failed" ? (engine.getLastError() ?? undefined) : undefined}
+    >
       <span
         className="engine-dot"
         aria-hidden="true"

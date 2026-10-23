@@ -26,8 +26,8 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -e .
-      # public/pkg sync runs automatically via the play's "prebuild" hook
-      # (npm run sync:pkg), so no separate copy step is needed here.
+      # Static assets sync automatically via the package's "prebuild" hook
+      # (npm run sync:pkg): the Python package and the Pyodide runtime.
       - run: npm ci
         working-directory: frontend
       - run: npm run build

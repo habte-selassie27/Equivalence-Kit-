@@ -8,7 +8,7 @@
  *     precomputed result stored in the site data.
  *
  * It runs the npm `pyodide` package in Node, which is the same wasm build the browser
- * worker loads from the CDN.
+ * worker loads from public/pyodide/.
  */
 
 import { readFileSync } from "node:fs";

@@ -13,12 +13,13 @@ import type { Request, Response, WorkerInit, WorkerRequest, WorkerResponse } fro
 export const MAX_REQUEST_BYTES = 64 * 1024;
 export const RUN_TIMEOUT_MS = 15_000;
 /**
- * The first request also boots Pyodide: about five megabytes over the network
- * (pyodide.asm.wasm 2.9 MB and python_stdlib.zip 2.2 MB, measured 2026-10-23). 15 s is
- * not enough for that on a normal connection, so any request sent while the engine is
- * still loading gets the boot budget instead. After BOOT_TIMEOUT_MS without a reply the
- * engine is declared failed so the shell can offer a retry instead of "loading" forever
- * — a boot that never answers must not sit invisible in the loading state.
+ * The first request also boots Pyodide: about 13 MB of engine files served from this
+ * site (pyodide.asm.wasm 9.7 MB, python_stdlib.zip 2.3 MB, pyodide.asm.js 1.2 MB,
+ * measured 2026-10-23), cached by the browser afterwards. 15 s is not enough for that
+ * on a normal connection, so any request sent while the engine is still loading gets
+ * the boot budget instead. After BOOT_TIMEOUT_MS without a reply the engine is declared
+ * failed so the shell can offer a retry instead of "loading" forever — a boot that never
+ * answers must not sit invisible in the loading state.
  */
 export const BOOT_TIMEOUT_MS = 60_000;
 
@@ -42,6 +43,7 @@ export class EngineClient {
   private worker: Worker | null = null;
   private status: EngineStatus = "idle";
   private version = "unknown";
+  private lastError: string | null = null;
   private listeners = new Set<(status: EngineStatus, version: string) => void>();
   private pending = new Map<
     number,
@@ -63,6 +65,11 @@ export class EngineClient {
     return this.version;
   }
 
+  /** The reason the engine last failed, for the UI to show instead of a generic notice. */
+  getLastError(): string | null {
+    return this.lastError;
+  }
+
   private setStatus(status: EngineStatus): void {
     this.status = status;
     for (const listener of this.listeners) {
@@ -80,6 +87,11 @@ export class EngineClient {
       this.handleReply(event.data);
     };
     worker.onerror = () => {
+      this.lastError = "ENGINE: WORKER_FAILED";
+      this.setStatus("failed");
+    };
+    worker.onmessageerror = () => {
+      this.lastError = "ENGINE: WORKER_MESSAGE";
       this.setStatus("failed");
     };
     this.worker = worker;
@@ -99,10 +111,12 @@ export class EngineClient {
     this.pending.delete(message.id);
     if (message.response.ok) {
       this.version = message.response.packageVersion;
+      this.lastError = null;
       this.setStatus("ready");
     } else if (this.status === "loading") {
       // A failed response while still booting means the engine is unusable this
       // session: the shell must show the precomputed state, not "loading" forever.
+      this.lastError = `${message.response.errorClass}: ${message.response.reason}`;
       this.setStatus("failed");
     }
     entry.resolve(message.response);
@@ -146,6 +160,7 @@ export class EngineClient {
         // The timeout killed a worker that never answered. That is a failure, not an
         // idle engine: say failed so the shell offers a retry (and never mislabels a
         // broken engine as "Engine idle").
+        this.lastError = "ENGINE: TIMEOUT";
         this.setStatus("failed");
         reject(new EngineError("ENGINE", "TIMEOUT"));
       }, this.status === "loading" ? BOOT_TIMEOUT_MS : RUN_TIMEOUT_MS);
@@ -170,6 +185,7 @@ export class EngineClient {
       clearTimeout(entry.timer);
     }
     this.pending.clear();
+    this.lastError = null;
     this.setStatus("idle");
   }
 

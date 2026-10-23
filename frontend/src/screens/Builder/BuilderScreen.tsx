@@ -94,6 +94,7 @@ export function BuilderScreen() {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [engineStatus, setEngineStatus] = useState<EngineStatus>(engine.getStatus());
+  const [engineError, setEngineError] = useState<string | null>(engine.getLastError());
 
   const [identityOk, setIdentityOk] = useState<boolean | null>(null);
   const [harmlessAccepted, setHarmlessAccepted] = useState(0);
@@ -102,7 +103,14 @@ export function BuilderScreen() {
   const [harmfulTotal, setHarmfulTotal] = useState(0);
   const [hasRun, setHasRun] = useState(false);
 
-  useEffect(() => engine.onStatus(setEngineStatus), []);
+  useEffect(
+    () =>
+      engine.onStatus((status) => {
+        setEngineStatus(status);
+        setEngineError(engine.getLastError());
+      }),
+    [],
+  );
   useEffect(() => {
     void engine.warmUp();
   }, []);
@@ -306,6 +314,22 @@ export function BuilderScreen() {
             Export contract skeleton
           </button>
         </div>
+        {engineFailed ? (
+          <ErrorNotice
+            message={`The engine couldn't start${engineError ? ` (${engineError})` : ""}. The tightness run is unavailable — check that this site can load /pyodide/, then retry.`}
+            action={
+              <button
+                type="button"
+                className="button"
+                onClick={() => {
+                  void engine.retry();
+                }}
+              >
+                Retry the engine
+              </button>
+            }
+          />
+        ) : null}
         {error ? <ErrorNotice message={error} /> : null}
 
         {hasRun ? (

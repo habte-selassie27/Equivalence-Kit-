@@ -8,6 +8,7 @@
     "bounds.py",
     "cli.py",
     "compare.py",
+    "diagnose.py",
     "digest.py",
     "errors.py",
     "matrix_runner.py",

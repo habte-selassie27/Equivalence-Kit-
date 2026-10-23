@@ -17,6 +17,21 @@ const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "..");
 const sourceDir = join(repoRoot, "equivalencekit");
 const targetDir = join(repoRoot, "frontend", "public", "pkg", "equivalencekit");
+const pyodideSourceDir = join(repoRoot, "frontend", "node_modules", "pyodide");
+const pyodideTargetDir = join(repoRoot, "frontend", "public", "pyodide");
+
+/**
+ * The Pyodide runtime is copied from the npm dependency instead of loaded from a CDN.
+ * The site must boot on networks that block third-party hosts, and the assets are served
+ * from the same origin as the page (and cached afterwards).
+ */
+const PYODIDE_FILES = [
+  "pyodide.mjs",
+  "pyodide.asm.js",
+  "pyodide.asm.wasm",
+  "python_stdlib.zip",
+  "pyodide-lock.json",
+];
 
 async function main() {
   const entries = await readdir(sourceDir, { withFileTypes: true });
@@ -43,7 +58,13 @@ async function main() {
     `${JSON.stringify({ package: "equivalencekit", version, files }, null, 2)}\n`,
   );
 
+  await mkdir(pyodideTargetDir, { recursive: true });
+  for (const name of PYODIDE_FILES) {
+    await cp(join(pyodideSourceDir, name), join(pyodideTargetDir, name));
+  }
+
   console.log(`synced ${files.length} package files (version ${version}) to public/pkg/`);
+  console.log(`synced ${PYODIDE_FILES.length} Pyodide files to public/pyodide/`);
 }
 
 main().catch((error) => {
