@@ -307,6 +307,23 @@ running. See `tests/helpers.py::deploy_contract`.
   staleness gate (`test_site_data.py`) pinned to `/usr/bin/python3.12`; the duplicate
   `test_export_is_fresh.py` from pass 16 is removed.
 
+## 2026-10-23 — pass 20 (site plumbing fixes, both deploy pipelines working)
+
+- Fixed `tools/deploy_playground_site.sh` on repeat refreshes: the local `gh-pages`
+  branch is disposable and is deleted before `checkout --orphan`, pushes are forced.
+  The pass-16 script worked exactly once, then refused itself with "branch already
+  exists".
+- Fixed `.github/workflows/pages.yml`: the `node tools/copy_pkg.mjs` step resolved a
+  wrong path inside `playground/` and is redundant anyway — `npm run build` runs the
+  `prebuild` (`sync:pkg`) hook, so the step was removed; the workflow's build job
+  completed 26 s later.
+- Added `main` to the `github-pages` environment deployment-branch allow-list (it
+  permitted only `gh-pages`, rejecting the Actions deploy outright); deploy rerun
+  then succeeded.
+- Serving continues from the legacy `gh-pages` pipeline; both are documented in
+  deployments/pages.md with the resolution to converge on one later.
+
+
 
 ## 2026-10-23 — pass 19 (Pattern Builder playground screen)
 
