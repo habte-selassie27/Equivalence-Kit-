@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { NavLink, Route, Routes } from "react-router-dom";
 import { packageVersion } from "../data/load";
 import { engine, type EngineStatus } from "../worker/engine";
+import { useSlowBoot } from "../lib/useSlowBoot";
 import { applyTheme, getThemeSetting, nextThemeSetting, subscribeSystemTheme, type ThemeSetting } from "../lib/theme";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { HomeScreen } from "../screens/Home/HomeScreen";
@@ -17,11 +18,15 @@ const EQUIVALENCE_DOCS_URL =
   "https://docs.genlayer.com/developers/intelligent-contracts/equivalence-principle";
 
 function EngineStatusLine({ status }: { status: EngineStatus }) {
+  // After 12 s of loading, say why: a first visit downloads the engine from the CDN.
+  const slowBoot = useSlowBoot(status === "loading");
   const label =
     status === "ready"
       ? `Engine ready — equivalencekit ${packageVersion}`
       : status === "loading"
-        ? "Loading the engine"
+        ? slowBoot
+          ? "Loading the engine — first visit fetches about 5 MB from the CDN"
+          : "Loading the engine"
         : status === "failed"
           ? "Using precomputed results"
           : "Engine idle";

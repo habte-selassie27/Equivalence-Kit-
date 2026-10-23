@@ -6,6 +6,7 @@ import { JsonEditor } from "../../components/JsonEditor";
 import { ReasonCode } from "../../components/ReasonCode";
 import { ToleranceTrack, type TrackResult } from "../../components/ToleranceTrack";
 import { VerdictChip } from "../../components/VerdictChip";
+import { useSlowBoot } from "../../lib/useSlowBoot";
 import {
   BOUNDARY_LINE,
   HONESTY_LINE,
@@ -61,6 +62,8 @@ export function PlaygroundScreen() {
     null,
   );
   const [engineStatus, setEngineStatus] = useState<EngineStatus>(engine.getStatus());
+  // First boot pull ~5 MB over the CDN; after 12 s the hint explains the wait honestly.
+  const slowBoot = useSlowBoot(engineStatus === "loading");
 
   useEffect(() => engine.onStatus(setEngineStatus), []);
   useEffect(() => {
@@ -360,7 +363,11 @@ export function PlaygroundScreen() {
 
         <div className="row actions">
           {engineStatus === "loading" ? (
-            <span className="small muted engine-hint">Loading the engine…</span>
+            <span className="small muted engine-hint">
+              {slowBoot
+                ? "Still loading — first visit fetches about 5 MB from the CDN, cached afterwards"
+                : "Loading the engine…"}
+            </span>
           ) : null}
           <button
             type="button"

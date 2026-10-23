@@ -307,6 +307,22 @@ running. See `tests/helpers.py::deploy_contract`.
   staleness gate (`test_site_data.py`) pinned to `/usr/bin/python3.12`; the duplicate
   `test_export_is_fresh.py` from pass 16 is removed.
 
+## 2026-10-23 — pass 23 (engine boot honesty: watchdog and staged hint)
+
+- A boot that never answers used to sit at "Loading the engine" forever while a broken
+  engine could be mislabeled "Engine idle" by the 15 s warm-up timeout. Now every
+  request sent while the engine is still loading gets a 60 s boot budget
+  (`BOOT_TIMEOUT_MS`), and a request timeout declares the engine failed — the shell
+  shows "Using precomputed results" with a Retry, never a hanging loader.
+- Both status lines explain long boots: after 12 s loading, the header and the
+  playground hint say the first visit fetches about 5 MB from the CDN
+  (pyodide.asm.wasm 2.9 MB + python_stdlib.zip 2.2 MB, measured) and it is cached
+  afterwards. `useSlowBoot` keeps the escalation honest — it never claims failure.
+- Context for the report that prompted this: the user's dev server predated the
+  `playground/` → `frontend/` rename, so its worker package fetches had no source to
+  serve; a fresh `npm run dev` from `frontend/` binds :5173 and serves `/pkg/` 200
+  (verified).
+
 ## 2026-10-23 — pass 22 (UI moved to frontend/)
 
 - The playground's Vite project moved from `playground/` to `frontend/` (git mv;

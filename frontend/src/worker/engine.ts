@@ -12,6 +12,15 @@ import type { Request, Response, WorkerInit, WorkerRequest, WorkerResponse } fro
 
 export const MAX_REQUEST_BYTES = 64 * 1024;
 export const RUN_TIMEOUT_MS = 15_000;
+/**
+ * The first request also boots Pyodide: about five megabytes over the network
+ * (pyodide.asm.wasm 2.9 MB and python_stdlib.zip 2.2 MB, measured 2026-10-23). 15 s is
+ * not enough for that on a normal connection, so any request sent while the engine is
+ * still loading gets the boot budget instead. After BOOT_TIMEOUT_MS without a reply the
+ * engine is declared failed so the shell can offer a retry instead of "loading" forever
+ * — a boot that never answers must not sit invisible in the loading state.
+ */
+export const BOOT_TIMEOUT_MS = 60_000;
 
 export type EngineStatus = "idle" | "loading" | "ready" | "failed";
 
@@ -134,8 +143,12 @@ export class EngineClient {
       const timer = setTimeout(() => {
         this.pending.delete(id);
         this.restart();
+        // The timeout killed a worker that never answered. That is a failure, not an
+        // idle engine: say failed so the shell offers a retry (and never mislabels a
+        // broken engine as "Engine idle").
+        this.setStatus("failed");
         reject(new EngineError("ENGINE", "TIMEOUT"));
-      }, RUN_TIMEOUT_MS);
+      }, this.status === "loading" ? BOOT_TIMEOUT_MS : RUN_TIMEOUT_MS);
 
       this.pending.set(id, { resolve, timer });
       worker.postMessage({ id, request } satisfies WorkerRequest);
