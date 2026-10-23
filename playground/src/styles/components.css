@@ -644,37 +644,110 @@
 
 /* Guide ------------------------------------------------------------------- */
 
-.guide {
-  margin: 0;
-  padding-left: var(--space-5);
+.guide-intro {
+  margin-bottom: 0;
+}
+
+.guide-panel {
+  padding-top: var(--space-5);
 }
 
 .guide-panel .guide-grid {
   display: grid;
-  grid-template-columns: 1fr 300px;
-  gap: var(--space-7);
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
   align-items: start;
 }
 
+@media (min-width: 1080px) {
+  .guide-panel .guide-grid {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: var(--space-7);
+  }
+}
+
+/* Stepper ------------------------------------------------------------------ */
+
+.guide-stepper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.guide-stepper ol {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.guide-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: var(--border);
+  background: transparent;
+  color: var(--graphite-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1;
+  transition:
+    background var(--speed-fast) var(--ease-out),
+    color var(--speed-fast) var(--ease-out),
+    border-color var(--speed-fast) var(--ease-out),
+    box-shadow var(--speed-fast) var(--ease-out);
+}
+
+.guide-dot:hover {
+  color: var(--calibre);
+  border-color: var(--calibre);
+}
+
+.guide-dot[data-state="done"] {
+  background: var(--calibre);
+  border-color: var(--calibre);
+  color: var(--bench);
+}
+
+.guide-dot[data-state="current"] {
+  color: var(--calibre);
+  border-color: var(--calibre);
+  box-shadow: 0 0 0 4px var(--calibre-tint);
+}
+
+/* Question step ------------------------------------------------------------- */
+
 .guide-step {
   animation: screen-rise var(--speed-slow) var(--ease-out) both;
+  min-width: 0;
 }
 
 .guide-step-count {
-  margin-bottom: var(--space-2);
+  margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--graphite-muted);
 }
 
 .guide-step-title {
   font-size: var(--text-xl);
-  margin-bottom: var(--space-3);
+  margin: 0 0 var(--space-3);
 }
 
 .guide-detail {
   color: var(--graphite-muted);
-  margin-bottom: var(--space-5);
+  margin: 0 0 var(--space-5);
+  max-width: 64ch;
 }
 
 .guide-options {
@@ -693,14 +766,18 @@
   background: var(--sheet);
   cursor: pointer;
   font: inherit;
-  transition: background var(--speed-fast) var(--ease-out),
+  min-height: 44px;
+  transition:
+    background var(--speed-fast) var(--ease-out),
     border-color var(--speed-fast) var(--ease-out),
+    box-shadow var(--speed-fast) var(--ease-out),
     transform var(--speed-fast) var(--ease-out);
 }
 
 .guide-option:hover {
-  background: var(--bench);
+  background: var(--rule-soft);
   border-color: var(--graphite-muted);
+  transform: translateY(-1px);
 }
 
 .guide-option:active {
@@ -710,10 +787,11 @@
 .guide-option[data-selected="true"] {
   background: var(--calibre-tint);
   border-color: var(--calibre);
+  box-shadow: inset 3px 0 0 var(--calibre);
 }
 
 .guide-option[data-selected="true"] .guide-option-label::before {
-  content: "✓";
+  content: "\2713";
   color: var(--calibre);
   font-weight: 700;
   margin-right: var(--space-2);
@@ -725,56 +803,223 @@
 
 .guide-nav {
   margin-top: var(--space-5);
+  justify-content: flex-start;
+}
+
+.guide-nav .btn:last-child {
+  margin-left: auto;
+}
+
+.guide-footnote {
+  margin-top: var(--space-6);
+}
+
+/* Progress rail -------------------------------------------------------------- */
+
+.guide-summary {
+  position: sticky;
+  top: 96px;
+  padding-left: var(--space-5);
+  border-left: var(--border);
+}
+
+@media (max-width: 1079px) {
+  .guide-summary {
+    position: static;
+    border-left: 0;
+    border-top: var(--border);
+    padding-left: 0;
+    padding-top: var(--space-5);
+  }
 }
 
 .guide-summary-title {
-  font-size: var(--text-base);
-  margin-bottom: var(--space-3);
+  margin: 0 0 var(--space-3);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--graphite-muted);
+}
+
+.guide-meter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.guide-meter-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--rule-soft);
+  overflow: hidden;
+}
+
+.guide-meter-fill {
+  display: block;
+  height: 100%;
+  background: var(--calibre);
+  transition: width var(--speed-base) var(--ease-out);
+}
+
+.guide-meter-label {
+  font-family: var(--font-mono);
   font-size: var(--text-xs);
   color: var(--graphite-muted);
 }
 
 .guide-progress {
+  list-style: none;
   margin: 0;
-  padding-left: var(--space-4);
+  padding: 0;
+  display: grid;
+  gap: var(--space-1);
 }
 
-.guide-progress li {
-  margin-bottom: var(--space-3);
+.guide-progress-row {
+  width: 100%;
+  display: grid;
+  gap: var(--space-1);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-field);
+  cursor: pointer;
+  font: inherit;
+  transition: background var(--speed-fast) var(--ease-out);
+}
+
+.guide-progress-row:hover {
+  background: var(--rule-soft);
+}
+
+.guide-progress li[data-current="true"] .guide-progress-row {
+  background: var(--calibre-tint);
 }
 
 .guide-progress .guide-progress-q {
   display: block;
   font-size: var(--text-xs);
   font-weight: 500;
-}
-
-.guide-progress .guide-progress-a {
-  display: block;
-  font-size: var(--text-xs);
-  color: var(--graphite-muted);
-}
-
-.guide-progress li[data-answered="true"] .guide-progress-a {
   color: var(--graphite);
 }
 
-.guide-progress li[data-answered="false"] .guide-progress-a {
-  font-style: italic;
+.guide-progress .guide-progress-a {
+  display: inline-block;
+  justify-self: start;
+  padding: 1px var(--space-2);
+  border-radius: 999px;
+  font-size: var(--text-xs);
+  color: var(--graphite-muted);
+  background: var(--rule-soft);
+  max-width: 100%;
 }
+
+.guide-progress li[data-answered="true"] .guide-progress-a {
+  background: var(--calibre-tint);
+  color: var(--calibre);
+}
+
+/* Recommendation --------------------------------------------------------------- */
 
 .guide-recommendation {
   animation: screen-rise var(--speed-slow) var(--ease-out) both;
+  min-width: 0;
 }
 
-.guide-recommendation .row {
-  margin-top: var(--space-5);
+.guide-recommendation h3 {
+  font-size: var(--text-base);
+  margin: var(--space-5) 0 var(--space-2);
 }
 
-.guide-rec-list {
-  font-size: var(--text-md);
+.guide-rec-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin: var(--space-3) 0 var(--space-2);
+}
+
+.guide-rec-chip {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-field);
+  background: var(--calibre-tint);
+  color: var(--calibre);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.guide-rec-title {
+  margin: 0;
+  font-size: var(--text-xl);
+}
+
+.guide-rec-reason {
+  margin: 0 0 var(--space-2);
+  max-width: 64ch;
+}
+
+.guide-rec-extras {
+  margin: 0 0 var(--space-2);
+}
+
+.guide-rec-extras-chips {
+  font-family: var(--font-mono);
+  color: var(--calibre);
+}
+
+.guide-rec-invariants {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.guide-rec-invariants li {
+  position: relative;
+  padding-left: var(--space-5);
+}
+
+.guide-rec-invariants li::before {
+  content: "\2713";
+  color: var(--calibre);
+  font-weight: 700;
+  position: absolute;
+  left: 0;
+}
+
+.guide-callout {
+  margin: var(--space-5) 0;
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-field);
+  background: var(--edge-tint);
+  box-shadow: inset 3px 0 0 var(--edge);
+  max-width: 64ch;
+}
+
+.guide-callout h3 {
+  margin: 0 0 var(--space-1);
+}
+
+.guide-callout p {
+  margin: 0;
+  color: var(--graphite);
+}
+
+.guide-callout-link {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--calibre);
+  cursor: pointer;
+  text-decoration: underline;
 }
 
 /* Responsive: stack the guide summary and the pattern list on narrow screens. */

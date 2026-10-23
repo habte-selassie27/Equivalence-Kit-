@@ -170,6 +170,47 @@ describe("Decision guide screen", () => {
     user.click(screen.getByRole("button", { name: "Back" }));
     expect(await screen.findByText(/Question 1 of 8/)).toBeInTheDocument();
   });
+
+  it("jumps between questions from the rail and the stepper", async () => {
+    const user = await fireEvent();
+    renderScreen(<DecisionGuideScreen />);
+    // A rail row opens that question directly.
+    user.click(
+      screen.getByRole("button", {
+        name: /^5\. What must never change the decision\?/,
+      }),
+    );
+    expect(await screen.findByText(/Question 5 of 8/)).toBeInTheDocument();
+    // A stepper dot jumps back.
+    user.click(
+      screen.getByRole("button", {
+        name: /Question 2: What shape is the non-deterministic output\?/,
+      }),
+    );
+    expect(await screen.findByText(/Question 2 of 8/)).toBeInTheDocument();
+  });
+
+  it("links the finished recommendation to the patterns route", async () => {
+    const user = await fireEvent();
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route path="/" element={<DecisionGuideScreen />} />
+          <Route path="/patterns" element={<PatternsScreen />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    for (let question = 1; question <= 8; question += 1) {
+      const options = screen
+        .getAllByRole("button")
+        .filter((button) => button.closest(".guide-option") !== null);
+      user.click(options[0] as HTMLElement);
+    }
+    expect(await screen.findByText("Recommendation")).toBeInTheDocument();
+    user.click(screen.getByRole("button", { name: "Read the pattern spec" }));
+    // The patterns screen shows the P1 spec; "Known limits" exists only there.
+    expect(await screen.findByText("Known limits")).toBeInTheDocument();
+  });
 });
 
 describe("Playground screen", () => {

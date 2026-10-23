@@ -354,9 +354,34 @@ export function DecisionGuideScreen() {
     navigate(`/playground?pattern=${patternId}`);
   };
 
+  const answeredCount = Object.keys(answers).length;
+
+  /** Arrow keys move focus through the option cards, like real radio inputs. */
+  const onOptionsKeyDown = (event: React.KeyboardEvent) => {
+    const keys = ["ArrowDown", "ArrowRight", "ArrowUp", "ArrowLeft"];
+    if (!keys.includes(event.key) || !current) {
+      return;
+    }
+    event.preventDefault();
+    const options = Array.from(
+      document.querySelectorAll<HTMLButtonElement>(
+        ".guide-options .guide-option",
+      ),
+    );
+    const active =
+      document.activeElement instanceof HTMLButtonElement
+        ? document.activeElement
+        : null;
+    const index = options.indexOf(active as HTMLButtonElement);
+    const delta = event.key === "ArrowDown" || event.key === "ArrowRight" ? 1 : -1;
+    const byIndex = (target: number) => options[target] ?? null;
+    const next = byIndex((index + delta + options.length) % Math.max(1, options.length));
+    next?.focus();
+  };
+
   return (
     <div className="stack">
-      <div className="panel">
+      <div className="panel guide-intro">
         <h1 className="panel-title">Decision guide</h1>
         <p className="panel-note">
           Work through these in order before writing any non-deterministic logic. The
@@ -370,32 +395,46 @@ export function DecisionGuideScreen() {
           <div className="guide-main">
             {finished && recommendation ? (
               <div className="guide-recommendation">
-                <h2 className="panel-title">Recommendation</h2>
-                <p className="guide-rec-list">
-                  <strong>
-                    {recommendation.primary} — {recommendation.title}
-                  </strong>
-                  {recommendation.extras.length > 0 ? (
-                    <span className="small muted">
-                      {" "}
-                      · also consider {recommendation.extras.join(", ")} where they apply
-                    </span>
-                  ) : null}
-                </p>
-                <p>{recommendation.reason}</p>
+                <p className="guide-step-count">Recommendation</p>
+                <div className="guide-rec-head">
+                  <span className="guide-rec-chip">{recommendation.primary}</span>
+                  <h2 className="guide-rec-title">{recommendation.title}</h2>
+                </div>
+                <p className="guide-rec-reason">{recommendation.reason}</p>
+                {recommendation.extras.length > 0 ? (
+                  <p className="guide-rec-extras small muted">
+                    also consider{" "}
+                    <span className="guide-rec-extras-chips">
+                      {recommendation.extras.join(" · ")}
+                    </span>{" "}
+                    where they apply
+                  </p>
+                ) : null}
                 <h3>Invariants to add</h3>
-                <ul className="spec-list">
+                <ul className="guide-rec-invariants">
                   {recommendation.invariants.map((line) => (
                     <li key={line}>
                       <code className="small mono">{line}</code>
                     </li>
                   ))}
                 </ul>
-                <h3>Tolerance starting point</h3>
-                <div className="small muted">
-                  For {recommendation.title}, begin with the canonical parameters — read
-                  them on the pattern page, or open the playground with the canonical
-                  example loaded and edit from there.
+                <div className="guide-callout">
+                  <h3>Tolerance starting point</h3>
+                  <p>
+                    For {recommendation.title}, begin with the canonical parameters —
+                    read them on the{" "}
+                    <button
+                      type="button"
+                      className="guide-callout-link"
+                      onClick={() =>
+                        navigate(`/patterns?pattern=${recommendation.primary}`)
+                      }
+                    >
+                      pattern page
+                    </button>
+                    , or open the playground with the canonical example loaded and edit
+                    from there.
+                  </p>
                 </div>
                 <div className="row">
                   <button
@@ -405,7 +444,13 @@ export function DecisionGuideScreen() {
                   >
                     Try {recommendation.primary} in the playground
                   </button>
-                  <button type="button" className="btn" onClick={() => navigate(`/?pattern=${recommendation.primary}`)}>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() =>
+                      navigate(`/patterns?pattern=${recommendation.primary}`)
+                    }
+                  >
                     Read the pattern spec
                   </button>
                   <button type="button" className="btn" onClick={() => writeParams(1, {})}>
@@ -415,12 +460,42 @@ export function DecisionGuideScreen() {
               </div>
             ) : current ? (
               <div className="guide-step">
-                <p className="small muted guide-step-count">
-                  Question {current.id} of 8
-                </p>
+                <div className="guide-stepper">
+                  <ol aria-label="Question progress">
+                    {QUESTIONS.map((item) => {
+                      const state =
+                        answers[item.id] && item.id !== current.id
+                          ? "done"
+                          : item.id === current.id
+                            ? "current"
+                            : "todo";
+                      return (
+                        <li key={item.id}>
+                          <button
+                            type="button"
+                            className="guide-dot"
+                            data-state={state}
+                            aria-label={`Question ${item.id}: ${item.question}`}
+                            onClick={() => writeParams(item.id, answers)}
+                          >
+                            {item.id}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                  <span className="guide-step-count">Question {current.id} of 8</span>
+                </div>
+                {/* The stepper renders the entire list; the caption keeps the
+                   numbered reading the guided tests rely on. */}
                 <h2 className="guide-step-title">{current.question}</h2>
                 <p className="guide-detail">{current.detail}</p>
-                <div className="guide-options">
+                <div
+                  className="guide-options"
+                  role="group"
+                  aria-label={current.question}
+                  onKeyDown={onOptionsKeyDown}
+                >
                   {current.options.map((option) => (
                     <button
                       key={option.id}
@@ -456,22 +531,52 @@ export function DecisionGuideScreen() {
                 </button>
               ) : null}
             </div>
+
+            <div className="guide-footnote">
+              <LimitsNote line={HONESTY_LINE} />
+            </div>
           </div>
 
           <aside className="guide-summary" aria-label="Your answers so far">
             <h2 className="guide-summary-title">Answers so far</h2>
+            <div
+              className="guide-meter"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={8}
+              aria-valuenow={answeredCount}
+              aria-label="Questions answered"
+            >
+              <span className="guide-meter-track">
+                <span
+                  className="guide-meter-fill"
+                  style={{ width: `${(answeredCount / 8) * 100}%` }}
+                />
+              </span>
+              <span className="guide-meter-label">{answeredCount}/8</span>
+            </div>
             <ol className="guide-progress">
               {QUESTIONS.map((item) => {
                 const answered = answers[item.id];
                 const option = item.options.find((entry) => entry.id === answered);
                 return (
-                  <li key={item.id} data-answered={answered ? "true" : "false"}>
-                    <span className="guide-progress-q">
-                      {item.id}. {item.question}
-                    </span>
-                    <span className="guide-progress-a">
-                      {option?.label ?? "not answered"}
-                    </span>
+                  <li
+                    key={item.id}
+                    data-answered={answered ? "true" : "false"}
+                    data-current={current?.id === item.id ? "true" : "false"}
+                  >
+                    <button
+                      type="button"
+                      className="guide-progress-row"
+                      onClick={() => writeParams(item.id, answers)}
+                    >
+                      <span className="guide-progress-q">
+                        {item.id}. {item.question}
+                      </span>
+                      <span className="guide-progress-a">
+                        {option?.label ?? "not answered"}
+                      </span>
+                    </button>
                   </li>
                 );
               })}
@@ -479,8 +584,6 @@ export function DecisionGuideScreen() {
           </aside>
         </div>
       </div>
-
-      <LimitsNote line={HONESTY_LINE} />
     </div>
   );
 }

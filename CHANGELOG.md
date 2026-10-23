@@ -307,6 +307,21 @@ running. See `tests/helpers.py::deploy_contract`.
   staleness gate (`test_site_data.py`) pinned to `/usr/bin/python3.12`; the duplicate
   `test_export_is_fresh.py` from pass 16 is removed.
 
+## 2026-10-23 — pass 21 (Decision guide visual pass)
+
+- Rebuilt the Decision guide flow: the question progress is an interactive stepper
+  (numbered dots, done/current/todo states, jump by click), the answer rail is a sticky
+  side column with an answered meter (n/8) and change-jump rows, option cards keep the
+  selected tint and check glyph, and arrow keys move focus through the options like real
+  radios.
+- The finished recommendation reads like a result card: pattern chip + title, invariant
+  checklist with checked glyphs, a tolerance starting-point callout, and the actions
+  row. The spec link now points at `/patterns?pattern=<P#>` — the old `/?pattern=…`
+  destination silently landed on home after the route rework.
+- The honesty footnote moved inside the guide panel so it stops floating between
+  panels; copy unchanged (`LimitsNote`).
+- Guide tests extended to 9 (stepper/rail jumps, pattern-spec route), suite 82.
+
 ## 2026-10-23 — pass 20 (site plumbing fixes, both deploy pipelines working)
 
 - Fixed `tools/deploy_playground_site.sh` on repeat refreshes: the local `gh-pages`
