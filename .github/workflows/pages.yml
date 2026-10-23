@@ -26,8 +26,8 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -e .
-      - run: node tools/copy_pkg.mjs
-        working-directory: playground
+      # public/pkg sync runs automatically via the play's "prebuild" hook
+      # (npm run sync:pkg), so no separate copy step is needed here.
       - run: npm ci
         working-directory: playground
       - run: npm run build
