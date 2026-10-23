@@ -356,3 +356,12 @@ running. See `tests/helpers.py::deploy_contract`.
 - Builder: new "What Run tightness checks" panel explains the identity case, the ten
   harmless generators, and the ten harmful generators per pattern, and that runs are
   in-memory only.
+
+## 2026-10-23 — pattern list selection no longer shifts
+
+- Removed the hover/active `translateX` on pattern list buttons: a clicked (and therefore
+  still hovered) item used to sit 2px right of the rest of the list.
+- The selected state now uses an inset ring in addition to the tint and border, with no
+  size or position change.
+- Set `scrollbar-gutter: stable` on the root so switching patterns cannot shift the page
+  horizontally when the vertical scrollbar appears or disappears.

@@ -13,6 +13,9 @@ body {
 
 html {
   color-scheme: light dark;
+  /* Keep the content width stable when switching patterns changes the page height and
+     the vertical scrollbar appears or disappears. */
+  scrollbar-gutter: stable;
 }
 
 body {
