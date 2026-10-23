@@ -380,3 +380,12 @@ running. See `tests/helpers.py::deploy_contract`.
   size or position change.
 - Set `scrollbar-gutter: stable` on the root so switching patterns cannot shift the page
   horizontally when the vertical scrollbar appears or disappears.
+
+## 2026-10-23 — remove pattern list jump on selection
+
+- The pattern list was `position: sticky` inside `.patterns-grid`. Because each spec has a
+  different height, switching to a shorter pattern shrank the grid and pushed the sticky
+  list up by up to ~170px (and could clamp the page scroll). The list now stays in normal
+  flow, so no element moves when a pattern is selected at any scroll position.
+- Verified in a browser at 1487×1031: clicking P1–P6 leaves every list item and the panel
+  top fixed; clicking while scrolled 0–500 moves neither the list nor the scroll position.
