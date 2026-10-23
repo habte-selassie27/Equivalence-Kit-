@@ -211,8 +211,13 @@ python3.12 tools/export_site_data.py         # regenerate
 python3.12 tools/export_site_data.py --check # fails if stale
 ```
 
-The playground is an optional companion, not part of the contract submission. It has no
-wallet, no transactions, and no chain access; it compares outputs and shows the rules.
+The playground is an optional companion, not part of the contract submission. Most of it
+compares outputs and shows the rules in the browser; the **Live** screen (`/live`) is the
+exception — it calls the three contracts deployed on StudioNet through the official
+`genlayer-js` SDK. Reads need no wallet. A write is signed in your wallet and followed
+through the whole transaction lifecycle: signature, hash, live consensus status, the final
+receipt with the validator votes and execution result, and a view call that reads the new
+record back. StudioNet is gasless, so a write costs 0 GEN.
 
 ## Credits and prior art
 

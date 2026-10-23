@@ -4,6 +4,36 @@ All notable changes to EquivalenceKit are recorded here. Format follows Keep a C
 
 ## [Unreleased]
 
+### Added — the Live screen: the frontend now calls the deployed contracts
+
+`/live` is the first screen that touches the chain. It uses the official `genlayer-js`
+SDK (installed as `frontend` dependency `genlayer-js@1.1.8`) and the three StudioNet
+addresses recorded in `deployments/studionet.md`.
+
+- **Reads need no wallet.** A view-method picker per contract (`get_config`,
+  `get_judgment`, `get_attestations`, `get_ranking`, …) calls the deployed contract and
+  renders exactly the JSON that came back — the same strings the Python tests assert on.
+  The config read runs on arrival, so the screen proves its own call path.
+- **Writes are signed in the wallet and followed end to end.** The full lifecycle is
+  rendered step by step: signature, transaction hash (linked to the explorer), the live
+  consensus status while validators vote, the final receipt with the validator votes and
+  the execution result — reported separately from finality, because a transaction can
+  finalize with a failed execution — and finally a view call that reads the new record
+  back so the write is proven to have landed. The new id comes from the `get_config()`
+  counter read before the write, the same way the deployment tests find it.
+- The create methods are prefilled with the values that already reached consensus on
+  StudioNet, so the first run is a known-good transaction; JSON arguments are validated
+  in the browser before they can be sent.
+- The SDK is loaded with a dynamic import, so it costs nothing until the screen is used
+  and the rest of the site keeps working if it never loads. The StudioNet RPC reflects
+  the page origin (`access-control-allow-origin`), verified before this shipped.
+- `frontend/src/lib/genlayer.ts` is the only module that touches the SDK; everything
+  else talks to its small structural API, so the screen's tests drive the lifecycle with
+  the bridge mocked. 9 new frontend tests (91 total).
+- `tests/site/test_site_data.py`: two new gates — every address and contract file in the
+  Live registry must appear in `deployments/studionet.md`, and every contract file must
+  exist on disk. A deployment that moves can no longer drift from the screen silently.
+
 ### Fixed — the two documented `ekit --json` output paths
 
 Both machine-readable modes advertised in the README and shown on the Developer's guide
