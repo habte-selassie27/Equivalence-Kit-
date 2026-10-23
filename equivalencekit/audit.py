@@ -8,6 +8,7 @@ check is deterministic, needs no network, and maps to a documented anti-pattern
 from __future__ import annotations
 
 import ast
+import json
 import os
 import re
 from dataclasses import dataclass, asdict

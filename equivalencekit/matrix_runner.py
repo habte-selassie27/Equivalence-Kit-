@@ -92,11 +92,13 @@ def run_matrix(path: Path, as_json: bool = False, check: bool = False) -> int:
                 "harmful_total": perturb_harmful_total,
             },
         }, indent=2))
-
-    print(f"\nTOTAL: {total_passed}/{total_cases} cases passed")
-    if perturb_harmless_total:
-        print(f"PERTURBATIONS: harmless {perturb_harmless}/{perturb_harmless_total}, "
-              f"harmful {perturb_harmful}/{perturb_harmful_total}")
+        # JSON mode must emit exactly one parseable document: totals live in the
+        # payload above, so the human summary lines are text-mode only.
+    else:
+        print(f"\nTOTAL: {total_passed}/{total_cases} cases passed")
+        if perturb_harmless_total:
+            print(f"PERTURBATIONS: harmless {perturb_harmless}/{perturb_harmless_total}, "
+                  f"harmful {perturb_harmful}/{perturb_harmful_total}")
 
     if check:
         if total_passed != total_cases:

@@ -12,6 +12,7 @@ import { TightnessScreen } from "../screens/Tightness/TightnessScreen";
 import { DecisionGuideScreen } from "../screens/DecisionGuide/DecisionGuideScreen";
 import { BuilderScreen } from "../screens/Builder/BuilderScreen";
 import { DevelopersGuideScreen } from "../screens/DevelopersGuide/DevelopersGuideScreen";
+import { LiveScreen } from "../screens/Live/LiveScreen";
 
 /** The official Equivalence Principle page. Linked from the footer per UI.md 6. */
 const EQUIVALENCE_DOCS_URL =
@@ -95,6 +96,7 @@ export function App() {
           <nav className="nav" aria-label="Primary">
             <NavLink to="/patterns">Patterns</NavLink>
             <NavLink to="/playground">Playground</NavLink>
+            <NavLink to="/live">Live</NavLink>
             <NavLink to="/tightness">Tightness</NavLink>
             <NavLink to="/builder">Builder</NavLink>
             <NavLink to="/guide">Decision guide</NavLink>
@@ -112,6 +114,7 @@ export function App() {
           <Route path="/" element={<HomeScreen />} />
           <Route path="/patterns" element={<PatternsScreen />} />
           <Route path="/playground" element={<PlaygroundScreen />} />
+          <Route path="/live" element={<LiveScreen />} />
           <Route path="/tightness" element={<TightnessScreen />} />
           <Route path="/builder" element={<BuilderScreen />} />
           <Route path="/guide" element={<DecisionGuideScreen />} />

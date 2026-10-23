@@ -62,7 +62,7 @@ genvm-lint check contracts/web_fact_attestor.py --json
 python3.12 -m pytest tests/integration -v -s --network studionet
 ```
 
-Current status: **257 tests passing** (primitives, matrices, direct, vendored equivalence);
+Current status: **272 tests passing** (primitives, matrices, direct, vendored equivalence);
 all four contracts lint clean; tightness 60/60 on both bars.
 
 ## What is in the kit
@@ -111,26 +111,6 @@ A reusable ranking primitive (P4). A creator freezes a candidate universe, a rub
 ranking parameters (top-k, overlap threshold, optional rank-distance cap). Participants
 append evidence references, and the contract produces an append-only ranking history. State
 machine: `OPEN -> RANKED -> CHALLENGED -> RANKED (round + 1) -> ... -> CLOSED`.
-
-## Live deployments (StudioNet)
-
-All three reference contracts are deployed on StudioNet, which is gasless (0 GEN). The full
-record — every transaction hash, the saved schemas, and the validator votes for each step —
-is in [`deployments/studionet.md`](deployments/studionet.md).
-
-| Contract | Address | Explorer |
-|---|---|---|
-| VerdictJudge | `0xC4B6E69EC35A9114b43397F6bB59541bC8c5e94B` | [view](https://explorer-studio.genlayer.com/address/0xC4B6E69EC35A9114b43397F6bB59541bC8c5e94B) |
-| WebFactAttestor | `0x6E720e9d701B542f0f77F52A4cD1b155225ad0FF` | [view](https://explorer-studio.genlayer.com/address/0x6E720e9d701B542f0f77F52A4cD1b155225ad0FF) |
-| RankingJudge | `0x6dc5764eE90dB65E7b102a0e78E7983deD92b717` | [view](https://explorer-studio.genlayer.com/address/0x6dc5764eE90dB65E7b102a0e78E7983deD92b717) |
-
-The deployed contracts were exercised end to end: a VerdictJudge evaluation reached
-agreement on a real LLM round, a WebFactAttestor attestation fetched the live `example.com`
-page under P2 consensus, and a RankingJudge round ranked a four-candidate universe under P4
-consensus with the submitted evidence in the prompt.
-
-Testnet (Bradbury / Asimov) deployment is **not** done — it needs a funded account, and
-claiming testnet GEN at the faucet is a browser step that cannot be automated.
 
 ## Documentation
 
@@ -219,7 +199,7 @@ primitives the contracts run.
 cd frontend
 npm install
 npm run dev          # http://127.0.0.1:5173
-npm run test         # 41 tests, including the Pyodide engine test
+npm run test         # 91 tests, including the Pyodide engine test
 npm run build        # writes dist/
 ```
 

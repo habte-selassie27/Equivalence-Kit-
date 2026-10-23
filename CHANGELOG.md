@@ -4,6 +4,21 @@ All notable changes to EquivalenceKit are recorded here. Format follows Keep a C
 
 ## [Unreleased]
 
+### Fixed — the two documented `ekit --json` output paths
+
+Both machine-readable modes advertised in the README and shown on the Developer's guide
+screen were broken; neither had a test, and CI only exercised the text path.
+
+- **`ekit audit <path> --json` crashed** with `NameError: name 'json' is not defined`
+  (`equivalencekit/audit.py` never imported `json`), so the "JSON output for CI" the
+  README and changelog promise did not exist.
+- **`ekit matrix <path> --json` was not parseable**: the human `TOTAL:` / `PERTURBATIONS:`
+  summary was printed after the JSON document. The totals already live inside the payload,
+  so those lines are now text-mode only and JSON mode emits exactly one document.
+- `tests/primitives/test_cli.py` (6 tests) shells the real `cli.main` entry point and
+  parses the full stdout with `json.loads`, covering clean and finding-bearing audits,
+  text mode, matrix `--json`, and `--json --check`.
+
 ### Fixed — M14 security audit of the three reference contracts
 
 A senior audit of `verdict_judge`, `web_fact_attestor`, and `ranking_judge` found one
