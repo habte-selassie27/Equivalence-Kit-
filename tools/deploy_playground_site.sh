@@ -18,9 +18,11 @@ WORKTREE=/tmp/opencode/ek-pages
 npm --prefix playground run build
 [ -f playground/dist/index.html ] || { echo "playground/dist/index.html missing" >&2; exit 1; }
 
-# Clean up any stale worktree from a previous run.
+# Clean up any stale worktree from a previous run; the disposable local branch is
+# reproduced below, so a leftover branch must not block checkout --orphan.
 git worktree remove --force "$WORKTREE" 2>/dev/null || true
 rm -rf "$WORKTREE"
+git branch -D gh-pages 2>/dev/null || true
 
 git worktree add --detach "$WORKTREE" HEAD > /dev/null
 (
@@ -32,7 +34,7 @@ git worktree add --detach "$WORKTREE" HEAD > /dev/null
   touch .nojekyll
   git add -A
   git commit -qm "deploy: refresh gh-pages playground site"
-  git push origin gh-pages --force
+  git push -q origin gh-pages --force
 )
 git worktree remove --force "$WORKTREE"
 echo "gh-pages pushed. GitHub Pages rebuilds automatically."
