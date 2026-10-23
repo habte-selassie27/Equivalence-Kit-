@@ -307,6 +307,21 @@ running. See `tests/helpers.py::deploy_contract`.
   staleness gate (`test_site_data.py`) pinned to `/usr/bin/python3.12`; the duplicate
   `test_export_is_fresh.py` from pass 16 is removed.
 
+## 2026-10-23 — pass 22 (UI moved to frontend/)
+
+- The playground's Vite project moved from `playground/` to `frontend/` (git mv;
+  history preserved). All path consumers updated: `tools/copy_pkg.mjs` sync target,
+  `tools/deploy_playground_site.sh` build/copy paths and its missing-dist error string,
+  `tools/export_site_data.py` DATA_DIR + docstring, `.github/workflows/pages.yml`
+  working directories and the artifact path, `.gitignore` entries, the README quick
+  start, `deployments/pages.md`, and the engine test that reads the matrices
+  (`playground/` → `frontend/`).
+- In-tree mentions of "playground" that name the PRODUCT and the `#/playground` route
+  are unchanged, as are historical changelog entries.
+- Gates after the move: typecheck OK, 82/82 tests (incl. the real-Pyodide engine
+  equivalence run), build clean, `export_site_data.py --check` fresh, vendor blocks
+  fresh.
+
 ## 2026-10-23 — pass 21 (Decision guide visual pass)
 
 - Rebuilt the Decision guide flow: the question progress is an interactive stepper

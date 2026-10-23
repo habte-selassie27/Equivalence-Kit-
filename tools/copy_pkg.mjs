@@ -16,7 +16,7 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "..");
 const sourceDir = join(repoRoot, "equivalencekit");
-const targetDir = join(repoRoot, "playground", "public", "pkg", "equivalencekit");
+const targetDir = join(repoRoot, "frontend", "public", "pkg", "equivalencekit");
 
 async function main() {
   const entries = await readdir(sourceDir, { withFileTypes: true });
@@ -39,7 +39,7 @@ async function main() {
   const version = versionMatch ? versionMatch[1] : "unknown";
 
   await writeFile(
-    join(repoRoot, "playground", "public", "pkg", "manifest.json"),
+    join(repoRoot, "frontend", "public", "pkg", "manifest.json"),
     `${JSON.stringify({ package: "equivalencekit", version, files }, null, 2)}\n`,
   );
 

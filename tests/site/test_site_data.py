@@ -1,6 +1,6 @@
 """Staleness guard for the playground's bundled site data.
 
-The playground ships pre-generated JSON (``playground/src/data/*.json``) produced by
+The playground ships pre-generated JSON (``frontend/src/data/*.json``) produced by
 ``tools/export_site_data.py``. If a primitive or pattern changes and the data is not
 regenerated, the site silently shows stale numbers. This test runs the check in CI.
 """

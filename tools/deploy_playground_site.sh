@@ -15,8 +15,8 @@ REPO_URL=$(git remote get-url origin)
 WORKTREE=/tmp/opencode/ek-pages
 
 # Fresh build; prebuild hooks keep public/pkg in sync with the Python package.
-npm --prefix playground run build
-[ -f playground/dist/index.html ] || { echo "playground/dist/index.html missing" >&2; exit 1; }
+npm --prefix frontend run build
+[ -f frontend/dist/index.html ] || { echo "frontend/dist/index.html missing" >&2; exit 1; }
 
 # Clean up any stale worktree from a previous run; the disposable local branch is
 # reproduced below, so a leftover branch must not block checkout --orphan.
@@ -30,7 +30,7 @@ git worktree add --detach "$WORKTREE" HEAD > /dev/null
   git checkout --orphan gh-pages
   # On an unborn branch everything is staged-new; -f is required to clear the index.
   git rm -rfq -- .
-  cp -r "$REPO_ROOT/playground/dist/." .
+  cp -r "$REPO_ROOT/frontend/dist/." .
   touch .nojekyll
   git add -A
   git commit -qm "deploy: refresh gh-pages playground site"

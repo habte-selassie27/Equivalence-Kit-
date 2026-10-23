@@ -6,7 +6,8 @@ BRANCH      gh-pages, root "/"; vite base "./" keeps the bundle path-agnostic
 URL         https://habte-selassie27.github.io/Equivalence-Kit-/
 ENABLED     2026-10-23, source branch gh-pages, path "/" (already enabled at deploy time;
             first build reported status "built")
-BUILT FROM  playground/dist at pass 15 (commit 83746c4) — fresh build at deploy time
+BUILT FROM  frontend/dist (the UI lived in playground/ up to pass 21),
+            fresh build at deploy time
 REFRESH     tools/deploy_playground_site.sh (legacy branch pipeline, serving authority)
 CI          .github/workflows/pages.yml (Actions artifact pipeline, fixed pass 20:
             copy_pkg step removed, `main` added to the github-pages environment

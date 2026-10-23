@@ -10,10 +10,10 @@ Usage:
     python3.12 tools/export_site_data.py --check    # fail if the committed data is stale
 
 Outputs (all generated, never hand-edited):
-    playground/src/data/patterns.json     P1-P6 field specs and invariants
-    playground/src/data/matrices/P*.json  the acceptance matrices
-    playground/src/data/canonical.json    the canonical example output per pattern
-    playground/src/data/report.json       the tightness report per pattern
+    frontend/src/data/patterns.json     P1-P6 field specs and invariants
+    frontend/src/data/matrices/P*.json  the acceptance matrices
+    frontend/src/data/canonical.json    the canonical example output per pattern
+    frontend/src/data/report.json       the tightness report per pattern
 """
 
 from __future__ import annotations
@@ -31,7 +31,7 @@ from equivalencekit.patterns import PATTERNS  # noqa: E402
 from tightness import build_report  # noqa: E402
 
 FIXTURE_DIR = ROOT / "tests" / "matrices"
-DATA_DIR = ROOT / "playground" / "src" / "data"
+DATA_DIR = ROOT / "frontend" / "src" / "data"
 PATTERN_IDS = ("P1", "P2", "P3", "P4", "P5", "P6")
 
 # Fields that are stored but never compared. The site must label them as such.

@@ -211,12 +211,12 @@ testnet GEN at the faucet is a browser step.
 
 ## Using the playground (optional companion)
 
-The playground is a static site in `playground/`. It runs the real `equivalencekit` package
+The playground is a static site in `frontend/`. It runs the real `equivalencekit` package
 in the browser through Pyodide, so every accept or reject it shows comes from the same
 primitives the contracts run.
 
 ```bash
-cd playground
+cd frontend
 npm install
 npm run dev          # http://127.0.0.1:5173
 npm run test         # 41 tests, including the Pyodide engine test

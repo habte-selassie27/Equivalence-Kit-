@@ -94,7 +94,7 @@ json.dumps(normalize_text("  \\uff23\\uff41\\uff46\\u00e9   Text  "))
   for (const patternId of ["P1", "P2", "P3", "P4", "P5", "P6"]) {
     it(`matches the stored results for every ${patternId} matrix case`, async () => {
       const matrix = JSON.parse(
-        readFileSync(join(repoRoot, "playground", "src", "data", "matrices", `${patternId}.json`), "utf8"),
+        readFileSync(join(repoRoot, "frontend", "src", "data", "matrices", `${patternId}.json`), "utf8"),
       ) as {
         cases: Array<{
           id: string;
@@ -121,7 +121,7 @@ json.dumps(normalize_text("  \\uff23\\uff41\\uff46\\u00e9   Text  "))
 
   it("produces harmless and harmful perturbations with the expected verdicts", async () => {
     const canonical = JSON.parse(
-      readFileSync(join(repoRoot, "playground", "src", "data", "canonical.json"), "utf8"),
+      readFileSync(join(repoRoot, "frontend", "src", "data", "canonical.json"), "utf8"),
     ) as { patterns: Record<string, { output: unknown; context: unknown }> };
 
     for (const patternId of ["P1", "P2", "P3", "P4", "P5", "P6"]) {
