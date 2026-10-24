@@ -4,6 +4,68 @@ All notable changes to EquivalenceKit are recorded here. Format follows Keep a C
 
 ## [Unreleased]
 
+### Added — the toolchain loop: write a rule, prove it tight, audit it, ship it
+
+The kit stops being reference-only and becomes something a builder runs on their own
+work. Everything below is delivered with tests and wired into CI and the README.
+
+- **`ekit tighten`** (`equivalencekit/tighten.py`): the harmless/harmful report for
+  user-supplied rules. Point `--rules` at a module with
+  `compare(leader, validator, context)` and `--fixtures` at a file in the same case
+  shape as the acceptance matrices; `--pattern P1..P6` also sends the kit's perturbation
+  generators through the user's rule; `--check` exits non-zero unless the rule is tight
+  (CI gate); `--init` writes a worked starter pair. A crash and a reasonless reject are
+  reported as rule bugs, never as decisions. 13 tests.
+- **Browser audit box** (`frontend/src/screens/Audit/`): paste a contract, run the same
+  `audit_source` the CI gate runs, inside the Pyodide worker (new `audit` request kind
+  in the worker protocol). Findings carry rule ids, lines, and links to
+  `docs/anti-patterns.md`; a share link (hash `?state=`) rebuilds the exact audit;
+  verified against the real engine — the sample trips A18 and A13 identically to the
+  CLI. 8 screen tests.
+- **SARIF output for `ekit audit`** (`equivalencekit/sarif.py`): stable SARIF 2.1.0
+  serialization (`--sarif [FILE]`), so findings land in GitHub code scanning on every
+  PR. `audit.yml` now uploads it while staying a merge gate. 6 tests.
+- **Audit rule A24** — `strict_eq` on model or web output: the most expensive too-strict
+  failure (a resolution that can never finalize) had no scanner rule. The rule was added
+  after auditing real public contracts: pm-kit's `crypto_prediction_market.py` and
+  `stock_prediction_market.py` (MIT, pinned `208ca03`) both wrap a live-price prompt in
+  `gl.eq_principle.strict_eq` and store a model-chosen winner without checking it is one
+  of the two allowed sides. `tests/primitives/test_audit.py` pins the pm-kit shape and
+  the `# ekit: ignore A24` escape hatch for legit code-decided uses.
+- **Real-world case study** (`docs/case-study.md`): four public contract files audited
+  with repro commands and pinned SHAs, findings analyzed one by one — including the
+  honest negatives (one heuristic near-false-positive explained) and the gap the scan
+  found in itself (A24, fixed the same day). A friendly issue draft for pm-kit is
+  included; posting it is deliberately left to the project owner.
+- **Property tests** (`tests/primitives/test_properties.py`): ten Hypothesis properties
+  over bounded random input — normalizer idempotence, id-list order/duplicate
+  insensitivity, `int_within_bps` equals the documented cross-multiplication rule,
+  bucket monotonicity with inclusive edges, ordinal distance never exceeds the declared
+  steps, set/subset comparators never raise. `hypothesis` added to `requirements.txt`
+  and CI.
+- **Mutation harness** (`tests/matrices/test_mutation.py`): five deterministic mutants
+  of `compare.py` — boundary drifts in `int_within_bps`/`int_within_abs`/`ordinal_within`,
+  a dropped `subset_of` check, an `enum_equal` polarity flip — each compiled and grafted
+  over the patterns, every acceptance-matrix case re-run; a surviving mutant fails the
+  suite. The matrices are thereby proven to catch the bug classes they claim to.
+- **Demo GIF** (`docs/assets/demo.gif`, recorded on the real app): the playground
+  accepting reordered citations and the audit box flagging a pasted contract.
+- **One-page decision tree** at the top of `docs/decision-guide.md`.
+- **GitHub issue templates** (bug report, rule proposal) with a contact link to the
+  official Equivalence Principle docs.
+
+### Changed
+
+- Repository renamed to [`habte-selassie27/equivalence-kit`](https://github.com/habte-selassie27/equivalence-kit)
+  (old URLs redirect); every link, clone URL, and badge updated.
+- CI now also runs `tests/site` + site-data freshness check and a full frontend job
+  (typecheck, unit tests, package sync, production build).
+- README: counts refreshed (319 local tests, 106 frontend tests), kit table now covers
+  the whole CLI (`tighten`, `scaffold`, `matrix`, `diagnose`) and the mutation harness,
+  and the docs table gains the case study. Wheel build verified: `python -m build`
+  produces a wheel with the `ekit` entry point and the new modules shipped
+  (a PyPI upload still needs a maintainer token — deliberately not automated).
+
 ### Fixed — the receipt the SDK returns is snake_case, and the Live screen read camelCase
 
 Verifying the wallet write against StudioNet caught a bug the mocked tests could not: the

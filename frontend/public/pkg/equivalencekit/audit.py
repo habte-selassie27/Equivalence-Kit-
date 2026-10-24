@@ -38,6 +38,7 @@ _LABELS = {
     "A18": "A tolerance that can be configured to zero",
     "A19": "Limits that are declared but never enforced",
     "A23": "Feeding a human-facing field into a strict schema check",
+    "A24": "strict_eq on model or web output",
     "syntax": "Source does not parse",
 }
 
@@ -192,6 +193,15 @@ def audit_source(source: str, filename: str = "<input>") -> list[Finding]:
                     findings.append(Finding("A6", node.lineno,
                         "UNAVAILABLE coerced to bool; it must remain its own state",
                         "docs/anti-patterns.md#A6"))
+
+    # A24: strict_eq applied where validators cannot be byte-identical.
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Attribute) and node.attr == "strict_eq":
+            findings.append(Finding("A24", node.lineno,
+                "gl.eq_principle.strict_eq(...) demands byte-identical validator output; "
+                "fine on code-decided values, never on model or web results — "
+                "use an equivalence rule instead",
+                "docs/anti-patterns.md#A24"))
 
     # A23-style: a comparator call where a dict is built with a digest key for a
     # pattern that does not allow it is already covered above.

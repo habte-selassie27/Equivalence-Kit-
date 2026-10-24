@@ -5,6 +5,29 @@ logic. Work through them in order; the answers determine your pattern and your t
 parameters. Then write the acceptance matrix before you write the comparator — the matrix is
 the specification.
 
+## The decision tree, in one page
+
+```
+Can validators reproduce the identical normalized output from identical inputs?
+├─ YES, and no model/web data is involved
+│   └─ strict or plain equality is fine ───────────────────────── still add reject tests
+└─ NO (model output, live pages, timestamps, free prose)
+    ├─ What single thing must agree?
+    │   ├─ a choice among labels + confidence ....... P1 verdict plus band
+    │   ├─ one yes/no about the world ............... P6 boolean attestation
+    │   ├─ a structured fact set from a page ........ P2 fact set
+    │   ├─ one number with natural noise ............ P3 bounded number
+    │   ├─ an ordered list of candidates ............ P4 ranking
+    │   └─ an unordered set of entities ............. P5 entity set
+    ├─ Can the model invent references, ids, units? ... add `subset_of`
+    │   (range checks for numbers) and a `consistent_with` table
+    ├─ Must the decision follow code, not the model? . decide it in code,
+    │   forbid verdicts after a failed deterministic item
+    └─ What if the source is down? ................... UNAVAILABLE is its own
+        state, never a negative fact
+Then: `ekit tighten --init`, write the matrix first, prove the rule is tight.
+```
+
 ## 1. Can validators reproduce the same normalized output?
 
 If validators can reproduce *exactly* the same normalized output from the same inputs, plain

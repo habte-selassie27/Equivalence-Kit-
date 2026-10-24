@@ -13,6 +13,9 @@ right.
 Live playground: https://equivalence-kit.vercel.app · Repository:
 https://github.com/habte-selassie27/equivalence-kit
 
+![The playground accepting reordered citations and the browser audit box flagging a zero
+tolerance and a float coercion on a pasted contract](docs/assets/demo.gif)
+
 ## What it is
 
 - **A pure-Python primitives package** (`equivalencekit/`) — normalizers, comparators,
