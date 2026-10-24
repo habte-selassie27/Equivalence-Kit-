@@ -14,3 +14,6 @@ htmlcov/
 gltest.config.yaml
 node_modules/
 .vercel
+
+# setuptools wheel test output
+build/
