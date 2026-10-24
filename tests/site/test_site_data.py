@@ -13,6 +13,7 @@ screen would call the wrong contract.
 from __future__ import annotations
 
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -20,11 +21,26 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent.parent
 
 
+def _pinned_python() -> list[str]:
+    """The pinned 3.12 interpreter wherever it lives.
+
+    Local gates use `/usr/bin/python3.12` (vendored output is interpreter-sensitive).
+     Runners install 3.12 elsewhere, so fall back to PATH and finally to the running
+    interpreter itself — which remains the pinned 3.12 inside this test process.
+    """
+
+    candidates = ["/usr/bin/python3.12", shutil.which("python3.12"), sys.executable]
+    for candidate in candidates:
+        if candidate and Path(candidate).exists():
+            return [candidate]
+    raise SystemExit("no python3.12 interpreter found for the site-data gate")
+
+
 def test_site_data_is_up_to_date():
     # Pinned interpreter on purpose: tool output is interpreter-sensitive and the
     # vendoring/export gates must not vary with an ambient `python3`.
     result = subprocess.run(
-        ["/usr/bin/python3.12", str(ROOT / "tools" / "export_site_data.py"), "--check"],
+        _pinned_python() + [str(ROOT / "tools" / "export_site_data.py"), "--check"],
         cwd=ROOT,
         capture_output=True,
         text=True,
