@@ -22,6 +22,25 @@ jobs:
         run: python -m pytest tests/primitives -q
       - name: Matrices
         run: python -m pytest tests/matrices -q
+      - name: Cache GenVM artifacts
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/gltest-direct
+          key: gltest-direct-v0.2.12
+      # gltest 0.29.2 resolves "latest" to v0.3.0-rc7 and requests
+      # genvm-universal.tar.xz, but that release renamed the asset to
+      # genvm-runners-all.tar.xz, so the download 404s. Seed the cache with
+      # v0.2.12, which still publishes genvm-universal.tar.xz and carries the
+      # runner hash the contracts pin. The contract header still selects the
+      # runner; only the archive location changes.
+      - name: Fetch GenVM artifacts
+        run: |
+          if [ ! -f "$HOME/.cache/gltest-direct/genvm-universal-v0.2.12.tar.xz" ]; then
+            mkdir -p "$HOME/.cache/gltest-direct"
+            curl -fL --retry 3 --retry-delay 2 \
+              -o "$HOME/.cache/gltest-direct/genvm-universal-v0.2.12.tar.xz" \
+              https://github.com/genlayerlabs/genvm/releases/download/v0.2.12/genvm-universal.tar.xz
+          fi
       - name: Direct
         run: python -m pytest tests/direct -q
       - name: Lint contracts
