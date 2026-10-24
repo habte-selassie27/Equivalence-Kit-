@@ -16,6 +16,8 @@
     "parsing.py",
     "patterns.py",
     "perturb.py",
-    "scaffold.py"
+    "sarif.py",
+    "scaffold.py",
+    "tighten.py"
   ]
 }

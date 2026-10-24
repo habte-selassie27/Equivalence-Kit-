@@ -31,7 +31,16 @@ export type Request =
       seed: number;
     }
   | { kind: "normalize"; fn: string; value: unknown }
-  | { kind: "listCases"; patternId: PatternId };
+  | { kind: "listCases"; patternId: PatternId }
+  | { kind: "audit"; source: string };
+
+/** One finding of `ekit audit`, returned by the "audit" request kind. */
+export interface AuditFinding {
+  rule: string;
+  line: number;
+  message: string;
+  doc: string;
+}
 
 export type Response =
   | { ok: true; result: unknown; packageVersion: string }

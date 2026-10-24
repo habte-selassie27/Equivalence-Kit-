@@ -110,6 +110,7 @@ sys.path.insert(0, ${JSON.stringify(PKG_MOUNT)})
 from equivalencekit.patterns import compare_pattern
 from equivalencekit.perturb import harmless_variation, harmful_variation
 from equivalencekit.normalize import normalize_text, normalize_enum, normalize_bool
+from equivalencekit.audit import audit_source as _audit_source
 from equivalencekit import __version__ as __ek_version__
 `);
   packageVersion = manifest.version;
@@ -227,6 +228,16 @@ _json.dumps(_fn(_value))
       return `
 import json as _json
 _json.dumps([])
+`;
+    case "audit":
+      return `
+import json as _json
+_source = _json.loads(${pystr(request.source)})
+_findings = _audit_source(_source, "audit_input.py")
+_json.dumps([
+    {"rule": _f.rule, "line": _f.line, "message": _f.message, "doc": _f.doc}
+    for _f in _findings
+])
 `;
   }
 }

@@ -12,6 +12,7 @@ import json
 import os
 import re
 from dataclasses import dataclass, asdict
+from pathlib import Path
 from typing import Iterable
 
 
@@ -37,6 +38,7 @@ _LABELS = {
     "A18": "A tolerance that can be configured to zero",
     "A19": "Limits that are declared but never enforced",
     "A23": "Feeding a human-facing field into a strict schema check",
+    "syntax": "Source does not parse",
 }
 
 _COMPARE_FUNCS = {
@@ -286,16 +288,30 @@ def main(argv: list[str] | None = None) -> int:
     audit = sub.add_parser("audit", help="audit a contract against the anti-pattern gallery")
     audit.add_argument("path", help="file or directory to audit")
     audit.add_argument("--json", action="store_true", help="emit machine-readable JSON")
+    audit.add_argument("--sarif", nargs="?", const="-", default=None, metavar="FILE",
+                       help="emit SARIF 2.1.0 (stdout when FILE is omitted); wins over --json")
     args = parser.parse_args(argv)
 
     if args.command == "audit":
         results = audit_file(args.path)
+        total = sum(len(f) for _, f in results)
+        if args.sarif is not None:
+            from equivalencekit.sarif import to_sarif
+            document = json.dumps(to_sarif(results), indent=2)
+            if args.sarif == "-":
+                print(document)
+            else:
+                try:
+                    Path(args.sarif).write_text(document + "\n", encoding="utf-8")
+                except OSError:
+                    print("EXPECTED: INVALID_ARGUMENT")
+                    return 2
+            return 1 if total else 0
         if args.json:
             payload = [{"file": path, "findings": [f.to_dict() for f in findings]}
                        for path, findings in results]
             print(json.dumps(payload, indent=2))
         else:
             print(format_text(results))
-        total = sum(len(f) for _, f in results)
         return 1 if total else 0
     return 2

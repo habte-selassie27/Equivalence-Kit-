@@ -10,6 +10,7 @@ import { HomeScreen } from "../screens/Home/HomeScreen";
 import { PatternsScreen } from "../screens/Patterns/PatternsScreen";
 import { PlaygroundScreen } from "../screens/Playground/PlaygroundScreen";
 import { TightnessScreen } from "../screens/Tightness/TightnessScreen";
+import { AuditScreen } from "../screens/Audit/AuditScreen";
 import { DecisionGuideScreen } from "../screens/DecisionGuide/DecisionGuideScreen";
 import { BuilderScreen } from "../screens/Builder/BuilderScreen";
 import { DevelopersGuideScreen } from "../screens/DevelopersGuide/DevelopersGuideScreen";
@@ -101,6 +102,7 @@ export function App() {
           <nav className="nav" aria-label="Primary">
             <NavLink to="/patterns">Patterns</NavLink>
             <NavLink to="/playground">Playground</NavLink>
+            <NavLink to="/audit">Audit</NavLink>
             <NavLink to="/live">Live</NavLink>
             <NavLink to="/tightness">Tightness</NavLink>
             <NavLink to="/builder">Builder</NavLink>
@@ -120,6 +122,7 @@ export function App() {
           <Route path="/" element={<HomeScreen />} />
           <Route path="/patterns" element={<PatternsScreen />} />
           <Route path="/playground" element={<PlaygroundScreen />} />
+          <Route path="/audit" element={<AuditScreen />} />
           <Route path="/live" element={<LiveScreen />} />
           <Route path="/tightness" element={<TightnessScreen />} />
           <Route path="/builder" element={<BuilderScreen />} />
