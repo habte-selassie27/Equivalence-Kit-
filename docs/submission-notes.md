@@ -33,15 +33,15 @@ perturbation generators) that reports harmless-acceptance and harmful-rejection 
 
 1. Run the primitive gates:
    `pytest tests/primitives tests/matrices tests/direct tests/site -v`
-   (279 tests, no GenLayer needed).
+   (322 tests, no GenLayer needed).
 2. Lint the contracts: `genvm-lint check contracts/<file>.py --json`.
 3. Audit a contract against the anti-pattern gallery: `ekit audit contracts/ --json`
-   (23 anti-patterns, A1–A23).
+   (24 anti-patterns, A1–A24).
 4. Run an acceptance matrix: `ekit matrix tests/matrices/P1.json` (or `--json`).
 5. Diagnose a failed transaction: `ekit diagnose <txHash>` (or `--from-file`).
 6. Deploy: `genlayer network set studionet`, then `genlayer deploy contracts/<file>.py`.
 7. Optional playground: `cd frontend && npm install && npm run dev`
-   (97 tests, including the Pyodide engine test).
+   (106 tests, including the Pyodide engine test).
 8. Live site: https://equivalence-kit.vercel.app — go to the Live screen.
 
 ## Tags
@@ -71,7 +71,7 @@ EquivalenceKit helps GenLayer builders decide what validators must agree on. Rul
 are too strict stop transactions finalizing; rules that are too loose finalize wrong
 answers. Both fail silently. The kit ships pure-Python primitives (normalizers,
 comparators, fail-closed parsing, closed error registry), six declarative patterns
-(P1–P6), an `ekit audit` linter for 23 known anti-patterns, and a tightness-testing
+(P1–P6), an `ekit audit` linter for 24 known anti-patterns, and a tightness-testing
 method that measures whether a rule is too loose or too strict. Three reference contracts
 with real state machines are deployed on StudioNet: VerdictJudge, WebFactAttestor and
 RankingJudge. A browser playground runs the same primitives via Pyodide, and its Live

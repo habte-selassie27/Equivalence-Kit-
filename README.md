@@ -73,7 +73,7 @@ genvm-lint check contracts/web_fact_attestor.py --json
 python3.12 -m pytest tests/integration -v -s --network studionet
 ```
 
-Current status: **319 local tests passing** (primitives, matrices, direct, site) and **106
+Current status: **322 local tests passing** (primitives, matrices, direct, site) and **106
 frontend tests**; all three reference contracts and the consensus-probe fixture lint clean;
 106 acceptance-matrix cases; perturbations 60/60 harmless accepted and 60/60 harmful rejected.
 

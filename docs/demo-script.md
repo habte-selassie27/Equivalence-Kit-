@@ -54,7 +54,7 @@ Screen: README Limitations section.
 
 Narration:
 "The kit grades agreement, not truth — that's stated up front. Three reference
-contracts, 279 local tests, 97 frontend tests, lint-clean, deployed, with explorer
+contracts, 322 local tests, 106 frontend tests, lint-clean, deployed, with explorer
 links. EquivalenceKit."
 
 ## Recording notes
