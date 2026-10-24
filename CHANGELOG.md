@@ -381,7 +381,7 @@ running. See `tests/helpers.py::deploy_contract`.
 - Hosted the playground on GitHub Pages: `gh-pages` branch served from `playground/dist`
   (vite `base "./"` makes the bundle path-agnostic), Pages already enabled on
   `gh-pages`/`:root` from the deploy session. Live at
-  https://habte-selassie27.github.io/Equivalence-Kit-/ — probes verified HTTP 200 on
+  https://habte-selassie27.github.io/equivalence-kit/ — probes verified HTTP 200 on
   the root, the hashed CSS bundle, and the Pyodide runtime copy; record in
   deployments/pages.md.
 - Added `tools/deploy_playground_site.sh`: idempotent refresh (fresh build → orphan

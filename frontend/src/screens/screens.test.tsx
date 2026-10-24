@@ -313,7 +313,8 @@ describe("Developer's guide screen", () => {
   it("documents the shipped CLI commands", () => {
     renderScreen(<DevelopersGuideScreen />);
     expect(screen.getByText(/ekit --version/)).toBeInTheDocument();
-    expect(screen.getByText(/ekit audit contracts --json/)).toBeInTheDocument();
+    expect(screen.getByText(/ekit audit contracts --sarif audit\.sarif/)).toBeInTheDocument();
+    expect(screen.getByText(/ekit tighten --init/)).toBeInTheDocument();
     expect(screen.getByText(/python3\.12 tools\/vendor\.py --check/)).toBeInTheDocument();
   });
 

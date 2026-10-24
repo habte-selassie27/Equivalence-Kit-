@@ -51,7 +51,7 @@ const DOCS = [
 ];
 
 const REPO_BLOB_URL =
-  "https://github.com/habte-selassie27/Equivalence-Kit-/blob/main/";
+  "https://github.com/habte-selassie27/equivalence-kit/blob/main/";
 
 export function HomeScreen() {
   const harmless = report.patterns.reduce((sum, item) => sum + item.harmlessAccepted, 0);

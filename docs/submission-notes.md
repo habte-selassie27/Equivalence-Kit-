@@ -57,8 +57,8 @@ not deployed: claiming testnet GEN is a browser step.
 ## Ready-to-paste submission fields
 
 Website: https://equivalence-kit.vercel.app
-GitHub: https://github.com/habte-selassie27/Equivalence-Kit-
-Evidence: https://github.com/habte-selassie27/Equivalence-Kit-
+GitHub: https://github.com/habte-selassie27/equivalence-kit
+Evidence: https://github.com/habte-selassie27/equivalence-kit
 
 ### One-liner
 

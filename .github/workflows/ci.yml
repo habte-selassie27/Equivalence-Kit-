@@ -43,6 +43,10 @@ jobs:
           fi
       - name: Direct
         run: python -m pytest tests/direct -q
+      - name: Site data freshness + frontend registry parity
+        run: |
+          python tools/export_site_data.py --check
+          python -m pytest tests/site -q
       - name: Lint contracts
         run: |
           for f in contracts/verdict_judge.py contracts/web_fact_attestor.py contracts/ranking_judge.py contracts/fixtures/consensus_probe.py; do
@@ -50,3 +54,27 @@ jobs:
           done
       - name: Vendor freshness
         run: python tools/vendor.py --check
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install
+        run: npm ci
+        working-directory: frontend
+      - name: Package sync (public/pkg)
+        run: npm run sync:pkg
+        working-directory: frontend
+      - name: Typecheck + unit tests
+        run: |
+          npx tsc --noEmit
+          npx vitest run
+        working-directory: frontend
+      - name: Production build
+        run: npx vite build
+        working-directory: frontend

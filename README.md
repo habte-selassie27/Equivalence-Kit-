@@ -11,7 +11,7 @@ EquivalenceKit is a tested kit for getting that decision right, and for *proving
 right.
 
 Live playground: https://equivalence-kit.vercel.app · Repository:
-https://github.com/habte-selassie27/Equivalence-Kit-
+https://github.com/habte-selassie27/equivalence-kit
 
 ## What it is
 
@@ -25,9 +25,11 @@ https://github.com/habte-selassie27/Equivalence-Kit-
   measure whether a rule is too loose or too strict, with a report you can read.
 - **Three reference contracts** with real state machines, not demos: VerdictJudge (P1),
   WebFactAttestor (P2), RankingJudge (P4).
-- **A browser playground and Live client** (`frontend/`): runs the real package under
-  Pyodide, and its Live screen calls the three deployed contracts through `genlayer-js`,
-  including a real wallet write lifecycle (signature, hash, consensus, receipt, read-back).
+- **A browser playground, audit box, and Live client** (`frontend/`): runs the real package
+  under Pyodide, and its Live screen calls the three deployed contracts through
+  `genlayer-js`, including a real wallet write lifecycle (signature, hash, consensus,
+  receipt, read-back). The Audit screen takes a pasted contract and runs the same
+  anti-pattern gallery the CI gate runs — findings stay on the machine, shareable by link.
 
 ## What it is not
 
@@ -45,6 +47,7 @@ ever written a validator that compares raw model output and hoped for the best.
 ```bash
 pip install -e .          # editable install exposes the `ekit` CLI
 ekit audit contracts/     # lint a contract against the anti-pattern gallery
+ekit tighten --init       # starter files to tightness-test YOUR OWN rule
 ```
 
 ## Quick start
@@ -67,7 +70,7 @@ genvm-lint check contracts/web_fact_attestor.py --json
 python3.12 -m pytest tests/integration -v -s --network studionet
 ```
 
-Current status: **279 local tests passing** (primitives, matrices, direct, site) and **97
+Current status: **319 local tests passing** (primitives, matrices, direct, site) and **106
 frontend tests**; all three reference contracts and the consensus-probe fixture lint clean;
 106 acceptance-matrix cases; perturbations 60/60 harmless accepted and 60/60 harmful rejected.
 
@@ -84,8 +87,13 @@ frontend tests**; all three reference contracts and the consensus-probe fixture 
 | Patterns | `equivalencekit/patterns.py` | P1–P6 specs and comparators, driven by the same data as the tests |
 | Perturbation | `equivalencekit/perturb.py` | Harmless and harmful mutation generators for tightness testing |
 | Tightness report | `tools/tightness.py` | Prints per-pattern acceptance/rejection rates |
-| Vendoring | `tools/vendor.py` | Inlines primitives into a single-file contract |
-| Audit linter | `equivalencekit/audit.py`, `ekit audit` | Static checks for all 23 anti-patterns (A1–A23), JSON output for CI |
+| Vendor | `tools/vendor.py` | Inlines primitives into a single-file contract |
+| Audit linter | `equivalencekit/audit.py`, `ekit audit` | Static checks for all 24 anti-patterns (A1–A24), JSON for CI, SARIF for GitHub code scanning |
+| Tightness for your rules | `ekit tighten` | Runs a user-supplied `compare(leader, validator, context)` through a fixtures file: harmless/harmful rates, case-by-case misses, `--check` for CI, `--init` for a starter pair |
+| Scaffold | `ekit scaffold --pattern P2` | Generates a contract skeleton plus its acceptance matrix from a pattern spec |
+| Matrix runner | `ekit matrix tests/matrices --check` | Runs any matrix JSON (kit-shaped or yours) through the pattern rules |
+| Receipt doctor | `ekit diagnose` | Reads a failed transaction receipt and reports what consensus stage failed |
+| Mutation harness | `tests/matrices/test_mutation.py` | Five comparator mutants; every one must be distinguished by the matrices |
 
 ## Reference contracts
 
@@ -130,7 +138,8 @@ contract.
 | [`docs/pattern-catalog.md`](docs/pattern-catalog.md) | P1–P6 filled specs, reason codes, acceptance matrices |
 | [`docs/decision-guide.md`](docs/decision-guide.md) | Eight questions to answer before writing non-deterministic logic |
 | [`docs/tightness-testing.md`](docs/tightness-testing.md) | Acceptance matrices, perturbation generators, the report |
-| [`docs/anti-patterns.md`](docs/anti-patterns.md) | 23 broken rules, the input that exposes each, and its fix |
+| [`docs/anti-patterns.md`](docs/anti-patterns.md) | 24 broken rules, the input that exposes each, and its fix |
+| [`docs/case-study.md`](docs/case-study.md) | `ekit audit` on four real public GenLayer contracts, with outputs and an honest miss analysis |
 | [`docs/threat-model.md`](docs/threat-model.md) | Threats, defenses, and — explicitly — what this kit cannot defend against |
 | [`docs/contracts.md`](docs/contracts.md) | Contract design and the verified GenLayer API ledger |
 
@@ -235,7 +244,7 @@ consensus status, the final receipt with the validator votes and execution resul
 call that reads the new record back. StudioNet is gasless, so a write costs 0 GEN.
 
 Live site: https://equivalence-kit.vercel.app (GitHub Pages mirror:
-https://habte-selassie27.github.io/Equivalence-Kit-/).
+https://habte-selassie27.github.io/equivalence-kit/).
 
 ## Credits and prior art
 

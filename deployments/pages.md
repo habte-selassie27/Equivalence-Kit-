@@ -2,7 +2,7 @@
 
 ```
 HOST        GitHub Pages (static hosting; not a GenLayer network)
-URL         https://habte-selassie27.github.io/Equivalence-Kit-/
+URL         https://habte-selassie27.github.io/equivalence-kit/
 SOURCE      GitHub Actions (build_type=workflow) — .github/workflows/pages.yml
 BUILD       `npm ci && npm run build` in frontend/, artifact = frontend/dist
 REFRESH     push to main — the Actions deploy pipeline rebuilds and publishes the artifact

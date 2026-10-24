@@ -9,7 +9,7 @@ import { packageVersion, patterns } from "../../data/load";
  * mirrors the shipped repository — nothing documented that the repo does not ship.
  */
 
-const REPO_CLONE_URL = "https://github.com/habte-selassie27/Equivalence-Kit-.git";
+const REPO_CLONE_URL = "https://github.com/habte-selassie27/equivalence-kit.git";
 
 const REPO_BLOB_URL = REPO_CLONE_URL.replace(".git", "") + "/blob/main/";
 
@@ -42,7 +42,7 @@ export function DevelopersGuideScreen() {
         <pre>
           <code>
             {`git clone ${REPO_CLONE_URL}
-cd Equivalence-Kit-
+cd equivalence-kit
 pip install -e .          # pure Python; no GenLayer imports involved
 ekit --version            # console entry point: ekit`}
           </code>
@@ -150,14 +150,14 @@ python3.12 tools/vendor.py --check    # gate: blocks match the package`}</code>
       <div className="panel">
         <h3>6 · Verify before you ship</h3>
         <pre>
-          <code>{`# primitives + matrices + contracts under real consensus
+          <code>{`# primitives + matrices + contracts under real consensus (add hypothesis first: pip install hypothesis)
 python3.12 -m pytest tests/primitives tests/matrices tests/direct -q
 
 # contract lint, after every contract change
 genvm-lint check contracts/verdict_judge.py --json
 
-# anti-pattern audit (also runs on every push via CI)
-ekit audit contracts --json
+# anti-pattern audit (also runs on every push; emits SARIF for code scanning)
+ekit audit contracts --sarif audit.sarif
 
 # full consensus runs
 gltest tests/integration/ -v -s`}</code>
@@ -171,7 +171,32 @@ gltest tests/integration/ -v -s`}</code>
       </div>
 
       <div className="panel">
-        <h3>7 · Know the limits</h3>
+        <h3>7 · Tighten your own rule</h3>
+        <p className="panel-note">
+          The tightness method is not reserved for this kit's patterns: point{" "}
+          <code>ekit tighten</code> at your own <code>compare(leader, validator,
+          context)</code> rule and a fixtures file in the same shape as an
+          acceptance matrix. It reports how often your rule accepts honest variation,
+          how often it rejects bad variation, names the exact cases it misses, and
+          treats a crash or a reasonless reject as a rule bug. Run it with{" "}
+          <code>--pattern P1</code> to also send the kit's harmless/harmful
+          perturbations through your rule.
+        </p>
+        <pre>
+          <code>{`ekit tighten --init                       # starter rules module + fixtures
+ekit tighten --rules my_rule.py \\
+  --fixtures my_fixtures.json             # the honest/tightness report
+ekit tighten --rules my_rule.py \\
+  --fixtures my_fixtures.json --pattern P1 --check   # CI gate: exit 1 unless tight`}</code>
+        </pre>
+        <p className="panel-note">
+          Prefer the browser? The <Link to="/audit">Audit screen</Link> runs the same
+          anti-pattern gallery on a pasted contract, locally, with a shareable link.
+        </p>
+      </div>
+
+      <div className="panel">
+        <h3>8 · Know the limits</h3>
         <p className="honesty">
           The kit proves that validators who read the evidence <em>carefully</em> agree
           on the decision. It cannot detect a wrong decision that every validator
