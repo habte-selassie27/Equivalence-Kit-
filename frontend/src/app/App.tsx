@@ -5,6 +5,7 @@ import { engine, type EngineStatus } from "../worker/engine";
 import { useSlowBoot } from "../lib/useSlowBoot";
 import { applyTheme, getThemeSetting, nextThemeSetting, subscribeSystemTheme, type ThemeSetting } from "../lib/theme";
 import { ThemeToggle } from "../components/ThemeToggle";
+import { WalletButton } from "../components/WalletButton";
 import { HomeScreen } from "../screens/Home/HomeScreen";
 import { PatternsScreen } from "../screens/Patterns/PatternsScreen";
 import { PlaygroundScreen } from "../screens/Playground/PlaygroundScreen";
@@ -107,6 +108,7 @@ export function App() {
             <NavLink to="/developing">Developer's guide</NavLink>
           </nav>
           <div className="header-controls">
+            <WalletButton />
             <ThemeToggle setting={themeSetting} onCycle={cycleTheme} />
             <EngineStatusLine status={status} />
           </div>

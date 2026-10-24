@@ -4,6 +4,73 @@ All notable changes to EquivalenceKit are recorded here. Format follows Keep a C
 
 ## [Unreleased]
 
+### Fixed — the receipt the SDK returns is snake_case, and the Live screen read camelCase
+
+Verifying the wallet write against StudioNet caught a bug the mocked tests could not: the
+SDK's TypeScript declarations describe camelCase receipt fields (`statusName`,
+`numOfRounds`, `lastRound.validatorVotesName`), but the RPC returns snake_case
+(`status_name`, `num_of_rounds`, `last_round.validator_votes_name`). The Finality panel
+read the declared names, so a real finalized transaction would have shown "Execution
+result: unknown" and no vote chips — exactly the guess-the-API failure this repo exists
+to prevent, and the mocks encoded the same wrong guess.
+
+- `frontend/src/lib/genlayer.ts::summarizeReceipt` now decodes the measured shape (and
+  falls back to the camelCase spelling and to `consensus_data.votes` when the round block
+  is absent). Consensus (`MAJORITY_AGREE`) and execution (`FINISHED_WITH_RETURN` /
+  `FINISHED_WITH_ERROR`, from the leader receipt) are reported as two separate facts.
+- `frontend/src/lib/receipt.test.ts` (5 tests) pins the decoder to a fixture transcribed
+  from a real finalized receipt, not from the type declarations.
+- `frontend/src/lib/genlayer.live.test.ts`: a gated live test that drives the **real**
+  `connectWallet` and `submitRecordWrite` against StudioNet. Everything is real — SDK,
+  RPC, deployed contract, consensus round, receipt, read-back — except the wallet UI,
+  which is replaced by the smallest EIP-1193 provider (a local key that forwards plain
+  RPC reads and asks the SDK to broadcast). Skipped unless `RUN_LIVE=1`, because it
+  writes to a live network and waits out a real round.
+- Evidence (StudioNet, gasless, 0 GEN):
+  - `0x3b29a0c6a013d457fc60f819d8dc9a2c017f9f01e7f8c170de5831cdf5c01891` —
+    `create_judgment` submitted directly to the contract address, ACCEPTED → FINALIZED,
+    MAJORITY_AGREE, and the record (`judgment 1`, title "Live screen write check") is
+    still in the committed state.
+  - `0x4d9d4e74ddc9750c174b1b08e19903d552335d3bf3febc7ab002fbf015af679a` — the same
+    call through the wallet path, FINALIZED / MAJORITY_AGREE, record read back
+    correctly straight after finality, then absent from committed state (see the next
+    entry). It self-documents as "Live screen wallet-path check" in the explorer.
+
+### Found — StudioNet rolls committed state back after finality
+
+Verifying the wallet write surfaced something the UI must never paper over: **finality is
+not persistence on StudioNet**, and the contract's own counter can move backwards.
+
+Measured on 2026-10-23 on the deployed VerdictJudge (`0xC4B6…`), gasless, 0 GEN:
+
+- Three `create_judgment` writes — one submitted directly to the contract address, two
+  through the wallet path (`eth_sendTransaction` via an EIP-1193 provider, which the SDK
+  wraps in an EVM call to the rollup contract `0x6cC47A13…`) — all finalized
+  `MAJORITY_AGREE` with correct calldata and `FINISHED_WITH_RETURN`, and each read its
+  new record back successfully straight after finality.
+- Later in the same session, two of those records were gone: `get_judgment(2)` and
+  `get_judgment(3)` both fail with `execution failed`, at every `stateStatus` (`latest`,
+  `accepted`, `final`), and `judgments_created` had moved **backwards** from 3 to 2. A
+  monotonic counter going backwards is unambiguous evidence of a state rollback, not of
+  a failed write. The record written at 14:51 UTC survived; the later ones did not.
+
+So: the write path — connect, sign, submit, consensus, receipt decoding, read-back — is
+verified working end to end, and nothing in this repo is at fault. What the finding
+changes is what the UI is allowed to claim:
+
+- The Live screen no longer hides a missing read-back. Finality with no record now
+  renders an explicit notice: finality is not proof that state persisted, re-read the
+  record, and treat the explorer receipt as the authority.
+- The live test gained a persistence re-check that waits 90 s after finality, prints
+  `PERSISTED` / `NOT PERSISTED` loudly, and fails only with `LIVE_REQUIRE_PERSISTENCE=1`,
+  so the measurement is repeatable without making the default run flaky.
+- Worth stating in any demo: StudioNet is a development network. Do not treat state
+  written there as durable, and do not build flows that assume a record survives.
+
+- Also measured: `client.connect` asks the wallet for `wallet_getSnaps` /
+  `wallet_requestSnaps` and needs an object back (a null crashes inside the SDK), and
+  the StudioNet RPC's `eth_chainId` is `0xf22f`. Both are recorded in the live test.
+
 ### Added — the Live screen: the frontend now calls the deployed contracts
 
 `/live` is the first screen that touches the chain. It uses the official `genlayer-js`

@@ -1,4 +1,6 @@
 import { Link } from "react-router-dom";
+import { OnChainRun } from "../../components/OnChainRun";
+import { findDeployment } from "../../lib/genlayer";
 import { PerturbationBar } from "../../components/PerturbationBar";
 import { matrices, report } from "../../data/load";
 import { findPattern } from "../../data/load";
@@ -136,6 +138,25 @@ export function TightnessScreen() {
           </div>
         );
       })}
+
+      <div className="panel">
+        <h2 className="panel-title">On chain (StudioNet)</h2>
+        <p className="panel-note">
+          The rates above are measured locally. This panel submits one real transaction to
+          the deployed VerdictJudge contract so you can watch the full lifecycle —
+          signature, hash, consensus, receipt, read-back — from this screen.
+        </p>
+        <OnChainRun
+          deployment={findDeployment("verdict_judge")}
+          method="create_judgment"
+          args={[
+            "Tightness run",
+            "ELIGIBLE,INELIGIBLE",
+            '[{"item_id":"hard_income","text":"Evidence must mention income.","kind":"DETERMINISTIC","rule_kind":"EVIDENCE_CONTAINS","rule_value":"income"},{"item_id":"quality","text":"Assess whether the evidence is sufficient and relevant.","kind":"INTERPRETIVE"}]',
+          ]}
+          label="Run on StudioNet"
+        />
+      </div>
     </div>
   );
 }

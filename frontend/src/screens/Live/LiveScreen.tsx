@@ -299,13 +299,36 @@ export function LiveScreen() {
 
         <div className="row live-wallet">
           <span className={`chip live-wallet-chip`} data-status={wallet.status}>
+            <span className="live-wallet-dot" aria-hidden="true" />
             {WALLET_LABEL[wallet.status]}
           </span>
           {wallet.address ? (
-            <span className="small muted">{shortAddress(wallet.address)} · StudioNet</span>
+            <span className="live-wallet-address">
+              <span className="live-wallet-address-text">{shortAddress(wallet.address)}</span>
+              <span className="live-wallet-network">StudioNet</span>
+            </span>
           ) : null}
           {wallet.status === "connected" ? null : (
-            <button type="button" onClick={() => void connect()} disabled={connecting}>
+            <button
+              type="button"
+              className="btn btn-primary live-wallet-connect"
+              onClick={() => void connect()}
+              disabled={connecting}
+            >
+              <svg
+                className="live-wallet-icon"
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                aria-hidden="true"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M3 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2" />
+                <path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H5" />
+                <circle cx="16" cy="13" r="1" fill="currentColor" stroke="none" />
+              </svg>
               {connecting ? "Connecting…" : "Connect wallet"}
             </button>
           )}
@@ -433,9 +456,17 @@ export function LiveScreen() {
                 ))}
               </div>
               <p className="small muted">
-                Execution result: <strong>{tx.executionResult ?? "unknown"}</strong>. A
-                transaction can finalize and still have a failed execution, so the two are
-                reported separately.
+                Consensus result: <strong>{tx.consensusResult ?? "unknown"}</strong>
+                {tx.execution ? (
+                  <>
+                    {" "}
+                    · Execution: <strong>{tx.execution}</strong>
+                  </>
+                ) : null}
+                . Consensus says validators accepted the result; execution says whether
+                the leader's VM finished with a return or an error. A transaction can be
+                accepted and still have a failed execution, so the two are reported
+                separately.
               </p>
               {tx.recordId !== undefined && tx.readBack !== undefined ? (
                 <>
@@ -445,6 +476,9 @@ export function LiveScreen() {
                   </p>
                   <pre className="live-json">{pretty(tx.readBack)}</pre>
                 </>
+              ) : null}
+              {tx.recordId !== undefined && tx.readBack === undefined ? (
+                <ErrorNotice message="This transaction finalized by consensus, but reading the record back did not return it. Finality is not proof that state persisted — re-read the record above in a moment, and treat the explorer receipt for this hash as the authority." />
               ) : null}
             </>
           ) : null}

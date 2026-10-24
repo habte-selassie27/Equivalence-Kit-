@@ -68,7 +68,7 @@ export const DEPLOYMENTS: Deployment[] = [
     label: "VerdictJudge",
     file: "contracts/verdict_judge.py",
     pattern: "P1",
-    address: "0x6cC47A13978911eE9124Ad20b64118d136dDC689",
+    address: "0x35aC9fC21e158121B7FC5a2FD0aEAbe62cF063ac",
     counterKey: "judgments_created",
     recordView: "get_judgment",
     reads: [
@@ -116,7 +116,7 @@ export const DEPLOYMENTS: Deployment[] = [
     label: "WebFactAttestor",
     file: "contracts/web_fact_attestor.py",
     pattern: "P2",
-    address: "0x8BBdf514EABFec622DED300dD39aD6e9d889E163",
+    address: "0x29aE058EdbDCECE5dB10a1a194d4a07e15594462",
     counterKey: "specs_created",
     recordView: "get_spec",
     reads: [
@@ -162,7 +162,7 @@ export const DEPLOYMENTS: Deployment[] = [
     label: "RankingJudge",
     file: "contracts/ranking_judge.py",
     pattern: "P4",
-    address: "0x7765Ce75320ca05974E79b25f029c2213a378A83",
+    address: "0x1c037a13C35E48c72694C6Dd061E908Bdf7f42Ce",
     counterKey: "records_created",
     recordView: "get_ranking",
     reads: [
@@ -229,8 +229,87 @@ interface Eip1193Provider {
   request(args: { method: string; params?: unknown[] | object }): Promise<unknown>;
 }
 
-/** Loose client surface: only the methods this module calls, structurally typed so the
- *  screen and its tests never import SDK types. */
+/** Loose receipt surface. The SDK's TypeScript declarations are camelCase, but the
+ *  StudioNet RPC returns snake_case fields (`status_name`, `num_of_rounds`,
+ *  `last_round.validator_votes_name`) — measured 2026-10-23 on a real finalized
+ *  transaction, not inferred. Both spellings are read; see `summarizeReceipt`. */
+export interface ReceiptLike {
+  statusName?: string;
+  status_name?: string;
+  numOfRounds?: string | number;
+  num_of_rounds?: string | number;
+  txExecutionResultName?: string;
+  result_name?: string;
+  lastRound?: { validatorVotesName?: string[] };
+  last_round?: { validator_votes_name?: string[] };
+  consensus_data?: {
+    votes?: Record<string, string>;
+    leader_receipt?: { result?: { status?: string } }[];
+  };
+}
+
+/** The four facts the finality panel shows, read from whatever spelling arrived. */
+export interface ReceiptSummary {
+  status?: string;
+  /** The consensus outcome, e.g. MAJORITY_AGREE. Not the same thing as execution. */
+  consensusResult?: string;
+  /** FINISHED_WITH_RETURN / FINISHED_WITH_ERROR, when the receipt carries it. */
+  execution?: string;
+  rounds?: string;
+  votes?: string[];
+}
+
+/**
+ * Normalize a receipt into what the UI shows.
+ *
+ * Two independent facts are kept separate on purpose:
+ * - consensus (`MAJORITY_AGREE`) says validators accepted the leader's result;
+ * - execution says whether the leader's VM finished with a return or an error.
+ * A transaction can be accepted by consensus and still have a failed execution, so the
+ * panel never reports one as the other.
+ */
+export function summarizeReceipt(receipt: ReceiptLike | undefined): ReceiptSummary {
+  if (!receipt) return {};
+  const summary: ReceiptSummary = {};
+
+  summary.status = receipt.status_name ?? receipt.statusName;
+  summary.consensusResult = receipt.result_name ?? receipt.txExecutionResultName;
+
+  const rounds = receipt.num_of_rounds ?? receipt.numOfRounds;
+  if (rounds !== undefined) summary.rounds = String(rounds);
+
+  const roundVotes =
+    receipt.last_round?.validator_votes_name ?? receipt.lastRound?.validatorVotesName;
+  if (roundVotes?.length) {
+    summary.votes = roundVotes;
+  } else {
+    const voteMap = receipt.consensus_data?.votes;
+    if (voteMap) {
+      const entries = Object.entries(voteMap);
+      if (entries.length) {
+        const normalized: string[] = [];
+        for (let i = 0; i < entries.length; i++) {
+          const entry = entries[i];
+          if (!entry) continue;
+          const [, vote] = entry;
+          const upper = String(vote).toUpperCase();
+          if (upper === "AGREE" || upper === "DISAGREE" || upper === "IDLE" || upper === "NOT_VOTED") {
+            normalized.push(upper === "IDLE" || upper === "NOT_VOTED" ? "NOT_VOTED" : upper);
+          }
+        }
+        summary.votes = normalized;
+
+      }
+    }
+  }
+
+  const leaderResult = receipt.consensus_data?.leader_receipt?.[0]?.result?.status;
+  if (leaderResult === "return") summary.execution = "FINISHED_WITH_RETURN";
+  else if (leaderResult === "error") summary.execution = "FINISHED_WITH_ERROR";
+
+  return summary;
+}
+
 export interface ChainClient {
   readContract(args: {
     address: `0x${string}`;
@@ -243,18 +322,16 @@ export interface ChainClient {
     args?: unknown[];
     value: bigint;
   }): Promise<`0x${string}`>;
-  getTransaction(args: { hash: string }): Promise<{ statusName?: string }>;
+  getTransaction(args: { hash: string }): Promise<{
+    statusName?: string;
+    status_name?: string;
+  }>;
   waitForTransactionReceipt(args: {
     hash: string;
     status?: string;
     interval?: number;
     retries?: number;
-  }): Promise<{
-    statusName?: string;
-    numOfRounds?: string | number;
-    txExecutionResultName?: string;
-    lastRound?: { validatorVotesName?: string[] };
-  }>;
+  }): Promise<ReceiptLike>;
   connect(network?: string): Promise<void>;
 }
 
@@ -402,9 +479,10 @@ export interface TxState {
   hash?: string;
   /** The consensus status as it moves: PENDING, PROPOSING, COMMITTING, REVEALING, … */
   statusName?: string;
-  /** The final receipt: validator votes, execution result, round count. */
+  /** The final receipt: validator votes, consensus outcome, execution, round count. */
   votes?: string[];
-  executionResult?: string;
+  consensusResult?: string;
+  execution?: string;
   rounds?: string;
   error?: string;
   /** The id the new record got, and the record read back after finality. */
@@ -498,7 +576,8 @@ async function followToFinality(
   const poll = async () => {
     try {
       const tx = await client.getTransaction({ hash });
-      const status = tx?.statusName;
+      // The RPC spells this `statusName`; older payloads used `status_name`.
+      const status = tx?.statusName ?? tx?.status_name;
       if (status && !seen.has(status)) {
         seen.add(status);
         state.phase = "tracking";
@@ -519,11 +598,13 @@ async function followToFinality(
       interval: POLL_INTERVAL_MS,
       retries: FINALITY_RETRIES,
     });
+    const summary = summarizeReceipt(receipt);
     state.phase = "finalized";
-    state.statusName = receipt?.statusName ?? "FINALIZED";
-    state.votes = receipt?.lastRound?.validatorVotesName;
-    state.executionResult = receipt?.txExecutionResultName;
-    state.rounds = receipt?.numOfRounds !== undefined ? String(receipt.numOfRounds) : undefined;
+    state.statusName = summary.status ?? "FINALIZED";
+    state.votes = summary.votes;
+    state.consensusResult = summary.consensusResult;
+    state.execution = summary.execution;
+    state.rounds = summary.rounds;
     onState({ ...state });
 
     if (nextId !== undefined) {

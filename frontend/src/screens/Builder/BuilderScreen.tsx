@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { canonical, findPattern } from "../../data/load";
 import { EmptyState, ErrorNotice } from "../../components/Notices";
+import { OnChainRun } from "../../components/OnChainRun";
 import { JsonEditor } from "../../components/JsonEditor";
 import { PerturbationBar } from "../../components/PerturbationBar";
 import { parseJson } from "../../lib/format";
+import { findDeployment } from "../../lib/genlayer";
 import { engine, EngineError, type EngineStatus } from "../../worker/engine";
 import type { CompareResult, PatternId } from "../../worker/protocol";
 import { PATTERN_IDS } from "../../worker/protocol";
@@ -389,6 +391,25 @@ export function BuilderScreen() {
           These are the same generators <code>ekit matrix</code> runs in CI, executed here
           in your browser with the real primitives.
         </p>
+      </div>
+
+      <div className="panel">
+        <h2 className="panel-title">On chain (StudioNet)</h2>
+        <p className="panel-note">
+          The tightness run above is local. This panel submits one real transaction to
+          the deployed VerdictJudge contract so you can watch the full lifecycle from
+          this screen.
+        </p>
+        <OnChainRun
+          deployment={findDeployment("verdict_judge")}
+          method="create_judgment"
+          args={[
+            "Builder run",
+            "ELIGIBLE,INELIGIBLE",
+            '[{"item_id":"hard_income","text":"Evidence must mention income.","kind":"DETERMINISTIC","rule_kind":"EVIDENCE_CONTAINS","rule_value":"income"},{"item_id":"quality","text":"Assess whether the evidence is sufficient and relevant.","kind":"INTERPRETIVE"}]',
+          ]}
+          label="Run on StudioNet"
+        />
       </div>
 
       <div className="panel">

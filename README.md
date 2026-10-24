@@ -26,7 +26,7 @@ right.
 ## What it is not
 
 - Not a hello-world, a thin LLM wrapper, or a format-only validator.
-- Not a frontend or an application.
+- Includes an optional browser playground (`/frontend`) that calls the deployed contracts; the kit itself is contract- and primitive-focused.
 - Not a substitute for reading the
   [Equivalence Principle](https://docs.genlayer.com/developers/intelligent-contracts/equivalence-principle).
 

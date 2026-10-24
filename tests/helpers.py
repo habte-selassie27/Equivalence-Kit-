@@ -119,8 +119,73 @@ def transact_until_agreed(contract, method, args=None, attempts=3, **kwargs):
     return last
 
 
+def _leader_errored(receipt) -> bool:
+    """Whether the leader's own VM refused the call (deterministic refusal)."""
+
+    consensus = receipt.get("consensus_data") or {}
+    for leader_receipt in consensus.get("leader_receipt") or []:
+        if leader_receipt.get("execution_result") == "ERROR":
+            return True
+        result = leader_receipt.get("result")
+        if isinstance(result, dict) and result.get("status") == "rollback":
+            return True
+    return False
+
+
+def transact_until_rejected(contract, method, args=None, attempts=3, **kwargs):
+    """Run a write method until the transaction is rejected, then return it.
+
+    ``Rejected`` here covers two distinct outcomes:
+
+    * validators disagreed with the leader's result, leaving the transaction
+      ``UNDETERMINED``; or
+    * the leader's own VM refused the call (a deterministic refusal such as an
+      unauthorized caller) and that refusal was finalized on chain with the
+      validators agreeing.
+
+    For the first case, each attempt is one rotation, the same as
+    ``transact_until_agreed``, so a refusal is prompt and a retry is meaningful.
+
+    For the leader-VM-refusal case, the write does not start a real consensus round;
+    the receipt is finalized by the chain instead, so this helper treats a finalized
+    result whose leader execution errored as a rejected write and does not wait for
+    validator disagreement.
+    """
+
+    kwargs.setdefault("consensus_max_rotations", 1)
+    last = None
+    for _ in range(max(1, attempts)):
+        try:
+            receipt = getattr(contract, method)(args=args or []).transact(**kwargs)
+        except Exception as error:
+            last = error
+            continue
+        vote_map = votes(receipt)
+        values = list(vote_map.values())
+        if "disagree" in values and receipt.get("status") == STATUS_UNDETERMINED:
+            return receipt
+        if _leader_errored(receipt):
+            return receipt
+        status = receipt.get("status")
+        if status is not None and status != STATUS_ACCEPTED:
+            return receipt
+        last = receipt
+    if isinstance(last, Exception):
+        raise last
+    assert_rejected(last)
+    return last
+
+
 def assert_rejected(receipt) -> None:
-    """The leader result was rejected: at least one validator disagreed."""
+    """The leader result was rejected: validators disagreed, or the leader's VM refused."""
+
+    if _leader_errored(receipt):
+        # Deterministic refusal: the leader's own VM rejected the call and the
+        # validators agreed on that refusal. The write is rolled back.
+        assert receipt.get("status") is not None, (
+            f"no status in receipt: {receipt}"
+        )
+        return
 
     vote_map = votes(receipt)
     assert vote_map, f"no validator votes in receipt: {receipt}"

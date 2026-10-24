@@ -302,3 +302,24 @@ def test_validator_accepts_honest_ranking_and_rejects_bad_ones(direct_vm, direct
 
     # A malformed shape.
     assert direct_vm.run_validator(leader_result={"ranking": "not a list"}) is False
+
+
+def test_candidate_universe_is_frozen_and_ties_stay_inside_top_k(direct_vm, direct_deploy):
+    """Candidate universe frozen at creation; ties only swap inside top-k."""
+    ranking = _new(direct_deploy)
+    ranking.submit_evidence(0, "the evidence")
+
+    # Frozen candidates are read back unchanged after a ranking round.
+    before = json.loads(ranking.get_ranking(0))["candidates"]
+    _mock(direct_vm)
+    ranking.rank(0)
+    after = json.loads(ranking.get_ranking(0))["candidates"]
+    assert before == after == ["a", "b", "c"]
+
+    # A tie that only reorders candidates inside the top-k is still accepted.
+    tie = {"ranking": ["a", "b", "c"], "digest": "tie"}
+    assert direct_vm.run_validator(leader_result=tie) is True
+
+    # A candidate outside the frozen universe never becomes accepted, even re-ranked.
+    outside = {"ranking": ["a", "b", "zz_unknown"], "digest": "x"}
+    assert direct_vm.run_validator(leader_result=outside) is False

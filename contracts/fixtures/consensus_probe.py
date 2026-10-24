@@ -948,6 +948,19 @@ class ConsensusProbe(gl.Contract):
         self.value = "SHOULD_NOT_PERSIST"
         return "SHOULD_NOT_PERSIST"
 
+    @gl.public.write
+    def reject_unauthorized_caller(self, caller: str) -> str:
+        """A deterministic refusal that reaches real consensus on StudioNet.
+
+        The leader's own VM rejects the caller before any model run, so the only reason a
+        validator can disagree with the leader's result is that the leader's result itself
+        is wrong. Because that reason is absolute, not stochastic, validators can disagree
+        and roll back the write without depending on model variance.
+        """
+        if caller == "authorized":
+            return "CALLED_BY_AUTHORIZED_PARTY"
+        raise gl.vm.UserError("EXPECTED: NOT_AUTHORIZED")
+
     @gl.public.view
     def get_value(self) -> str:
         return self.value

@@ -164,7 +164,8 @@ describe("LiveScreen writes", () => {
           hash,
           statusName: "FINALIZED",
           votes: ["AGREE", "AGREE", "IDLE"],
-          executionResult: "FINISHED_WITH_RETURN",
+          consensusResult: "MAJORITY_AGREE",
+          execution: "FINISHED_WITH_RETURN",
           rounds: "1",
           recordId: 1,
           readBack: record,
@@ -186,9 +187,13 @@ describe("LiveScreen writes", () => {
     expect(txLink).toHaveAttribute("href", explorerTxUrl(hash));
     expect(await screen.findByText("Finalized after 1 round(s).")).toBeTruthy();
 
-    // The validator votes and the execution result are shown separately.
+    // The validator votes and the consensus outcome are shown separately from the
+    // execution result, because a transaction can be accepted and still fail to execute.
     const votes = screen.getByLabelText("Validator votes");
     expect(within(votes).getAllByText("AGREE")).toHaveLength(2);
+    expect(screen.getByText("MAJORITY_AGREE")).toBeTruthy();
+    expect(screen.getByText("FINISHED_WITH_RETURN")).toBeTruthy();
+    expect(screen.getByText(/Consensus says validators accepted/)).toBeTruthy();
 
     // The record read back from the chain proves the write landed.
     expect(

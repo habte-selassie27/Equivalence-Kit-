@@ -24,7 +24,7 @@ from pathlib import Path
 from gltest import get_contract_factory
 from gltest_cli.config.general import get_general_config
 
-from helpers import assert_agreed, build_contract, transact_until_agreed, votes
+from helpers import assert_agreed, assert_rejected, assert_undetermined, build_contract, transact_until_agreed, transact_until_rejected, votes
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 OUTPUT = ROOT / "deployments" / "studionet.md"
@@ -244,6 +244,16 @@ def test_deploy_reference_contracts_to_studionet():
     attestor_address = attestor_receipt["data"]["contract_address"]
 
     attestor = build_contract(attestor_address)
+
+    # Deploy the deterministic refusal probe next to the reference contracts.
+    probe_factory = get_contract_factory(contract_file_path="fixtures/consensus_probe.py")
+    probe_receipt = probe_factory.deploy_contract_tx(args=[])
+    probe_contract = build_contract(probe_receipt["data"]["contract_address"])
+
+    probe_config = probe_contract.get_value(args=[]).call()
+    probe_create = probe_contract.accept_adjacent_band(args=[]).transact()
+    assert_agreed(probe_create)
+    assert probe_contract.get_value(args=[]).call() == "ACCEPTED"
     attestor_config = attestor.get_config(args=[]).call()
 
     spec_receipt = attestor.create_spec(
@@ -258,6 +268,17 @@ def test_deploy_reference_contracts_to_studionet():
 
     latest_read = attestor.get_latest_attestation(args=[0]).call()
     attestations_read = attestor.get_attestations(args=[0]).call()
+
+    # A real refusal-and-rollback under consensus: an unauthorized caller is rejected.
+    # This is the same write path a real user transaction would take, and the only
+    # deterministic refusal case we can keep deterministic on a live network.
+    probe_receipt = transact_until_rejected(
+        probe_contract,
+        "reject_unauthorized_caller",
+        args=["unauthorized"],
+    )
+    assert_rejected(probe_receipt)
+    assert probe_contract.get_value(args=[]).call() == "ACCEPTED"
 
     _record(
         lines,

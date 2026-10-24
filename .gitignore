@@ -13,3 +13,4 @@ htmlcov/
 *.egg-info/
 gltest.config.yaml
 node_modules/
+.vercel

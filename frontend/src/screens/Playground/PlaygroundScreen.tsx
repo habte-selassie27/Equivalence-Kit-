@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { canonical, findPattern, matrices, packageVersion } from "../../data/load";
+import { findDeployment } from "../../lib/genlayer";
 import { EmptyState, ErrorNotice } from "../../components/Notices";
 import { JsonEditor } from "../../components/JsonEditor";
 import { ReasonCode } from "../../components/ReasonCode";
 import { ToleranceTrack, type TrackResult } from "../../components/ToleranceTrack";
 import { VerdictChip } from "../../components/VerdictChip";
+import { OnChainRun } from "../../components/OnChainRun";
 import { useSlowBoot } from "../../lib/useSlowBoot";
 import {
   BOUNDARY_LINE,
@@ -122,6 +124,7 @@ export function PlaygroundScreen() {
   }, [patternId, caseId]);
 
   const spec = findPattern(patternId);
+  const onChainRef = useRef<import("../../components/OnChainRun").OnChainRunHandle>(null);
 
   const run = async () => {
     const leader = parseJson(leaderText);
@@ -143,6 +146,10 @@ export function PlaygroundScreen() {
         context: context.ok ? context.value : {},
       });
       setOutcome({ kind: "live", result: raw as CompareResult });
+      // The comparison above is local and instant. Also fire one real transaction so
+      // the wallet signs and the full lifecycle (hash, consensus, receipt, read-back)
+      // is exercised from this button, as requested.
+      void onChainRef.current?.run();
     } catch (caught) {
       setError(engineErrorMessage(caught, liveRunFailed));
     } finally {
@@ -542,6 +549,26 @@ export function PlaygroundScreen() {
           <LimitBars loadedCase={loadedCase} />
         </div>
       ) : null}
+
+      <div className="panel">
+        <h2 className="panel-title">On chain (StudioNet)</h2>
+        <p className="panel-note">
+          The comparison above runs locally in your browser. This panel submits one real
+          transaction to the deployed VerdictJudge contract, so you can watch the full
+          lifecycle — signature, hash, consensus, receipt, read-back — from this screen.
+        </p>
+        <OnChainRun
+          ref={onChainRef}
+          deployment={findDeployment("verdict_judge")}
+          method="create_judgment"
+          args={[
+            `Playground ${patternId}`,
+            "ELIGIBLE,INELIGIBLE",
+            '[{"item_id":"hard_income","text":"Evidence must mention income.","kind":"DETERMINISTIC","rule_kind":"EVIDENCE_CONTAINS","rule_value":"income"},{"item_id":"quality","text":"Assess whether the evidence is sufficient and relevant.","kind":"INTERPRETIVE"}]',
+          ]}
+          label="Run on StudioNet"
+        />
+      </div>
 
       <LimitsNote line={HONESTY_LINE} />
     </div>
