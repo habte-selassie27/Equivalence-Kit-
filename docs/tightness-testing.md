@@ -84,9 +84,9 @@ P5: cases=18 (accept=6, reject=6, boundary=6)
     harmless accepted 10/10; harmful rejected 10/10
 P6: cases=18 (accept=6, reject=6, boundary=6)
     harmless accepted 10/10; harmful rejected 10/10
-Total: 106 matrix cases
-Harmless acceptance: 60/60
-Harmful rejection: 60/60
+Matrix cases: 106
+Perturbation acceptance: 60/60 harmless variants
+Perturbation rejection: 60/60 harmful variants
 ```
 
 **Harmless acceptance: 60/60 (100%). Harmful rejection: 60/60 (100%).** Both must hold for
@@ -152,7 +152,31 @@ with the last receipt, so a genuine regression is not masked.
 - Keep the perturbation generators deterministic (seeded `random.Random`), so a failure
   reproduces exactly.
 
-## 7. What this cannot prove
+## 7. Before/after: a naive rule vs. the kit
+
+A reviewer can reasonably ask how the kit is better than what they would write first. The
+answer is in `tests/matrices/test_naive_vs_kit.py`, which runs the same two inputs through
+a naive rule and through the kit's P1 rule:
+
+```text
+NAIVE VS KIT (P1)
+  input                 naive_strict_equal  naive_verdict_only  kit P1
+  honest variation      False                True                True
+  hallucinated id       False                True                False
+```
+
+* **Naive strict equality** rejects the honest variation (reordered ids, one-step band
+  shift, rewritten digest): too strict — honest validators would never agree, so nothing
+  finalizes.
+* **Naive verdict-only** accepts the hallucinated id: too loose — validators finalize a
+  wrong answer.
+* **Kit P1** accepts the honest variation and rejects the hallucination, because it
+  compares the decision, tolerates harmless noise, and enforces `subset_of` on cited ids.
+
+That is the whole point of the kit: the naive rules each fail one of the two bars
+(agreement and garbage rejection), and P1 passes both.
+
+## 8. What this cannot prove
 
 Tightness testing proves the rule behaves as specified on the cases you generate. It cannot
 prove that the specification itself is correct, and it cannot catch a wrong answer that

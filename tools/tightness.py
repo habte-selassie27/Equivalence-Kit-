@@ -92,9 +92,9 @@ def main() -> int:
     total_harmless = sum(item["harmless_accepted"] for item in report.values())
     total_harmful = sum(item["harmful_rejected"] for item in report.values())
     total_seeds = sum(item["harmless_total"] for item in report.values())
-    print(f"Total: {total_cases} matrix cases")
-    print(f"Harmless acceptance: {total_harmless}/{total_seeds}")
-    print(f"Harmful rejection: {total_harmful}/{total_seeds}")
+    print(f"Matrix cases: {total_cases}")
+    print(f"Perturbation acceptance: {total_harmless}/{total_seeds} harmless variants")
+    print(f"Perturbation rejection: {total_harmful}/{total_seeds} harmful variants")
     return 0 if total_harmless == total_seeds == total_harmful else 1
 
 

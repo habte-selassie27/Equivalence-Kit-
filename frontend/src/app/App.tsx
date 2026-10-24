@@ -96,7 +96,7 @@ export function App() {
         <div className="app-header-inner">
           <NavLink to="/" className="brand">
             EquivalenceKit
-            <small>Optional companion — not part of the contract submission</small>
+            <small>Tested equivalence patterns for GenLayer contracts</small>
           </NavLink>
           <nav className="nav" aria-label="Primary">
             <NavLink to="/patterns">Patterns</NavLink>

@@ -10,6 +10,9 @@ permanently. Both failures are silent: no exception, no revert, no log line.
 EquivalenceKit is a tested kit for getting that decision right, and for *proving* you got it
 right.
 
+Live playground: https://equivalence-kit.vercel.app · Repository:
+https://github.com/habte-selassie27/Equivalence-Kit-
+
 ## What it is
 
 - **A pure-Python primitives package** (`equivalencekit/`) — normalizers, comparators,
@@ -22,11 +25,13 @@ right.
   measure whether a rule is too loose or too strict, with a report you can read.
 - **Three reference contracts** with real state machines, not demos: VerdictJudge (P1),
   WebFactAttestor (P2), RankingJudge (P4).
+- **A browser playground and Live client** (`frontend/`): runs the real package under
+  Pyodide, and its Live screen calls the three deployed contracts through `genlayer-js`,
+  including a real wallet write lifecycle (signature, hash, consensus, receipt, read-back).
 
 ## What it is not
 
 - Not a hello-world, a thin LLM wrapper, or a format-only validator.
-- Includes an optional browser playground (`/frontend`) that calls the deployed contracts; the kit itself is contract- and primitive-focused.
 - Not a substitute for reading the
   [Equivalence Principle](https://docs.genlayer.com/developers/intelligent-contracts/equivalence-principle).
 
@@ -62,8 +67,9 @@ genvm-lint check contracts/web_fact_attestor.py --json
 python3.12 -m pytest tests/integration -v -s --network studionet
 ```
 
-Current status: **278 tests passing** (primitives, matrices, direct, vendored equivalence);
-all four contracts lint clean; tightness 60/60 on both bars.
+Current status: **279 local tests passing** (primitives, matrices, direct, site) and **97
+frontend tests**; all three reference contracts and the consensus-probe fixture lint clean;
+106 acceptance-matrix cases; perturbations 60/60 harmless accepted and 60/60 harmful rejected.
 
 ## What is in the kit
 
@@ -79,7 +85,7 @@ all four contracts lint clean; tightness 60/60 on both bars.
 | Perturbation | `equivalencekit/perturb.py` | Harmless and harmful mutation generators for tightness testing |
 | Tightness report | `tools/tightness.py` | Prints per-pattern acceptance/rejection rates |
 | Vendoring | `tools/vendor.py` | Inlines primitives into a single-file contract |
-| Audit linter | `equivalencekit/audit.py`, `ekit audit` | Static checks for the anti-pattern gallery (A1, A3, A6, A13, A14, A15, A18, A19, A23), JSON output for CI |
+| Audit linter | `equivalencekit/audit.py`, `ekit audit` | Static checks for all 23 anti-patterns (A1–A23), JSON output for CI |
 
 ## Reference contracts
 
@@ -105,12 +111,17 @@ extracted **in code**, so prompt injection in the page cannot change them. Valid
 the page independently and compare fact-by-fact. `UNAVAILABLE` is a first-class state with an
 empty fact set — a failed fetch is never recorded as a negative finding.
 
-### `contracts/ranking_judge.py`
+### `RankingJudge` (`contracts/ranking_judge.py`)
 
 A reusable ranking primitive (P4). A creator freezes a candidate universe, a rubric, and
 ranking parameters (top-k, overlap threshold, optional rank-distance cap). Participants
 append evidence references, and the contract produces an append-only ranking history. State
 machine: `OPEN -> RANKED -> CHALLENGED -> RANKED (round + 1) -> ... -> CLOSED`.
+
+**Pattern coverage note.** The three contracts exercise P1, P2, and P4. P3 (bounded number),
+P5 (entity set), and P6 (boolean attestation) are implemented as primitives, specs, and
+matrices and are covered by the test suite, but they do not ship a deployed reference
+contract.
 
 ## Documentation
 
@@ -119,7 +130,7 @@ machine: `OPEN -> RANKED -> CHALLENGED -> RANKED (round + 1) -> ... -> CLOSED`.
 | [`docs/pattern-catalog.md`](docs/pattern-catalog.md) | P1–P6 filled specs, reason codes, acceptance matrices |
 | [`docs/decision-guide.md`](docs/decision-guide.md) | Eight questions to answer before writing non-deterministic logic |
 | [`docs/tightness-testing.md`](docs/tightness-testing.md) | Acceptance matrices, perturbation generators, the report |
-| [`docs/anti-patterns.md`](docs/anti-patterns.md) | 16 broken rules, the input that exposes each, and its fix |
+| [`docs/anti-patterns.md`](docs/anti-patterns.md) | 23 broken rules, the input that exposes each, and its fix |
 | [`docs/threat-model.md`](docs/threat-model.md) | Threats, defenses, and — explicitly — what this kit cannot defend against |
 | [`docs/contracts.md`](docs/contracts.md) | Contract design and the verified GenLayer API ledger |
 
@@ -130,10 +141,14 @@ python3.12 tools/tightness.py
 ```
 
 ```text
-Total: 106 matrix cases
-Harmless acceptance: 60/60
-Harmful rejection: 60/60
+Matrix cases: 106
+Perturbation acceptance: 60/60 harmless variants
+Perturbation rejection: 60/60 harmful variants
 ```
+
+The two counts are different sets: the 106 are hand-written matrix cases (P1–P6); the
+60+60 are generated perturbations (10 harmless and 10 harmful per pattern). Both are
+required to be 100%.
 
 Every pattern accepts 100% of harmless perturbations (reordered ids, casing, adjacent
 buckets, one-step band shifts, differing digests) and rejects 100% of harmful ones (flipped
@@ -159,7 +174,7 @@ See [`docs/threat-model.md`](docs/threat-model.md) for the full list.
 
 ```
 equivalencekit/     pure primitives — no GenLayer imports
-contracts/          VerdictJudge, WebFactAttestor, and the consensus probe fixture
+contracts/          VerdictJudge, WebFactAttestor, RankingJudge, and the consensus probe fixture
 tools/              vendor.py (single-file inlining), tightness.py (report)
 docs/               pattern catalog, decision guide, threat model, anti-patterns
 tests/primitives/   pure tests, no GenLayer
@@ -176,9 +191,9 @@ record — addresses, transaction hashes, saved schemas, and per-step validator 
 
 | Contract | Address | Explorer |
 |---|---|---|
-| VerdictJudge | `0x6cC47A13978911eE9124Ad20b64118d136dDC689` | [view](https://explorer-studio.genlayer.com/address/0x6cC47A13978911eE9124Ad20b64118d136dDC689) |
-| WebFactAttestor | `0x8BBdf514EABFec622DED300dD39aD6e9d889E163` | [view](https://explorer-studio.genlayer.com/address/0x8BBdf514EABFec622DED300dD39aD6e9d889E163) |
-| RankingJudge | `0x7765Ce75320ca05974E79b25f029c2213a378A83` | [view](https://explorer-studio.genlayer.com/address/0x7765Ce75320ca05974E79b25f029c2213a378A83) |
+| VerdictJudge | `0x35aC9fC21e158121B7FC5a2FD0aEAbe62cF063ac` | [view](https://explorer-studio.genlayer.com/address/0x35aC9fC21e158121B7FC5a2FD0aEAbe62cF063ac) |
+| WebFactAttestor | `0x29aE058EdbDCECE5dB10a1a194d4a07e15594462` | [view](https://explorer-studio.genlayer.com/address/0x29aE058EdbDCECE5dB10a1a194d4a07e15594462) |
+| RankingJudge | `0x1c037a13C35E48c72694C6Dd061E908Bdf7f42Ce` | [view](https://explorer-studio.genlayer.com/address/0x1c037a13C35E48c72694C6Dd061E908Bdf7f42Ce) |
 
 A VerdictJudge evaluation reached agreement on a real LLM round with the digest stored but
 never compared. A WebFactAttestor attestation fetched the live `example.com` page under P2
@@ -186,10 +201,11 @@ consensus; the word-count fact holds the raw count and the bucket rule decides a
 RankingJudge round ranked four candidates under P4 consensus, with the submitted evidence
 rendered into the prompt.
 
-Testnet (Bradbury / Asimov) deployment is not done: it needs a funded account, and claiming
-testnet GEN at the faucet is a browser step.
+Bradbury / Asimov deployment is out of scope for this submission: StudioNet is the target and
+is gasless. Deploying to Bradbury needs a funded account, and claiming testnet GEN at the
+faucet is a browser step.
 
-## Using the playground (optional companion)
+## The playground and the Live screen
 
 The playground is a static site in `frontend/`. It runs the real `equivalencekit` package
 in the browser through Pyodide, so every accept or reject it shows comes from the same
@@ -199,7 +215,7 @@ primitives the contracts run.
 cd frontend
 npm install
 npm run dev          # http://127.0.0.1:5173
-npm run test         # 91 tests, including the Pyodide engine test
+npm run test         # 97 tests, including the Pyodide engine test
 npm run build        # writes dist/
 ```
 
@@ -211,13 +227,15 @@ python3.12 tools/export_site_data.py         # regenerate
 python3.12 tools/export_site_data.py --check # fails if stale
 ```
 
-The playground is an optional companion, not part of the contract submission. Most of it
-compares outputs and shows the rules in the browser; the **Live** screen (`/live`) is the
-exception — it calls the three contracts deployed on StudioNet through the official
-`genlayer-js` SDK. Reads need no wallet. A write is signed in your wallet and followed
-through the whole transaction lifecycle: signature, hash, live consensus status, the final
-receipt with the validator votes and execution result, and a view call that reads the new
-record back. StudioNet is gasless, so a write costs 0 GEN.
+Most of the playground compares outputs and shows the rules in the browser. The **Live**
+screen (`/live`) is the part that touches the chain: it calls the three contracts deployed
+on StudioNet through the official `genlayer-js` SDK. Reads need no wallet. A write is signed
+in your wallet and followed through the whole transaction lifecycle: signature, hash, live
+consensus status, the final receipt with the validator votes and execution result, and a view
+call that reads the new record back. StudioNet is gasless, so a write costs 0 GEN.
+
+Live site: https://equivalence-kit.vercel.app (GitHub Pages mirror:
+https://habte-selassie27.github.io/Equivalence-Kit-/).
 
 ## Credits and prior art
 
