@@ -491,3 +491,37 @@ same reason.
 **The general rule.** Every caller that compares via a pattern comparator must pass exactly
 the pattern's compared fields. If a field is not compared, strip it at the call site — never
 widen the pattern's schema to accommodate it.
+
+---
+
+### A24 — strict_eq on model or web output
+
+**Broken.** Wrap a non-deterministic source in the strict equality principle, where every
+validator must produce byte-identical output:
+
+```python
+json_result = gl.eq_principle.strict_eq(fetch_price_and_winner_task)
+```
+
+**Why it fails.** `strict_eq` is the right tool for values the code decides (a checksum, a
+counter) — there every validator computes the identical bytes. Feed it a prompt that asks a
+model to read a page and return a price with decimals and a winning side in prose, and two
+honest validators will differ by one character: different quote marks, `"65,001.42"` versus
+`"65001.42"`, a trailing newline. The rule is always false, the transaction never finalizes,
+and nothing in the error path explains why. Found in the wild: pm-kit's
+`crypto_prediction_market.py` and `stock_prediction_market.py` (see docs/case-study.md).
+
+**Fixed.** Decide what validators agree **on**, then use an equivalence rule for it:
+
+```python
+# code decides the allowed sides; the model only picks inside them
+enum_equal(winner, winner, (side_a, side_b))                 # decision: exact
+int_within_bps(price_a, price_b, tolerance_bps)              # price: inclusive band
+```
+
+**Test.** `tests/primitives/test_audit.py::test_a24_flags_strict_eq_on_nondeterminism`
+flags the snippet above and does not flag a `strict_eq` on a code-computed value.
+
+**Audit heuristic.** `ekit audit` reports every `strict_eq` occurrence as a reason to
+look. A `strict_eq` that wraps code-decided values is legitimate — the finding only asks
+you to confirm which one this is.

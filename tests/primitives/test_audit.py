@@ -53,3 +53,27 @@ def test_ignore_directive_suppresses():
 def test_ignore_file_suppresses():
     source = "# ekit: ignore-file A13\nx = 0.5\n"
     assert audit_source(source) == []
+
+
+def test_a24_flags_strict_eq_on_nondeterminism():
+    # Mirrors the pm-kit prediction-market shape (docs/case-study.md).
+    source = (
+        "task = render(url)\n"
+        "result = gl.eq_principle.strict_eq(task)\n"
+    )
+    findings = audit_source(source)
+    a24 = [f for f in findings if f.rule == "A24"]
+    assert len(a24) == 1 and a24[0].line == 2
+
+
+def test_a24_is_a_reason_to_look_not_a_ban():
+    # strict_eq on a code-decided value is legitimate; the audit still asks you to
+    # confirm which kind this is (documented heuristic anti-pattern).
+    source = 'return gl.eq_principle.strict_eq(deterministic_total)\n'
+    findings = audit_source(source)
+    assert [f.rule for f in findings] == ["A24"]
+
+    # An ignore directive stays available for the legit case.
+    assert audit_source(
+        'return gl.eq_principle.strict_eq(deterministic_total)  # ekit: ignore A24\n'
+    ) == []
